@@ -2431,9 +2431,14 @@ function yahooTradingDate(timestamp){
   try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(Number(timestamp)*1000));}
   catch(e){return new Date(Number(timestamp)*1000).toISOString().slice(0,10);}
 }
+function yahooPositiveNumber(value){
+  if(value===null||value===undefined||value==='')return null;
+  const number=Number(value);
+  return Number.isFinite(number)&&number>0?number:null;
+}
 function calculateStockPerformance(prices,announcementDate,currency='SAR'){
   const byDate=new Map();
-  (prices||[]).forEach(item=>{const date=String(item?.date||''),close=Number(item?.close);if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&Number.isFinite(close))byDate.set(date,close);});
+  (prices||[]).forEach(item=>{const date=String(item?.date||''),close=yahooPositiveNumber(item?.close);if(/^\d{4}-\d{2}-\d{2}$/.test(date)&&close!==null)byDate.set(date,close);});
   const ordered=[...byDate].map(([date,close])=>({date,close})).sort((a,b)=>a.date.localeCompare(b.date));
   const before=ordered.filter(item=>item.date<announcementDate).at(-1);
   const after=ordered.filter(item=>item.date>=announcementDate);
@@ -2447,16 +2452,18 @@ function parseYahooChartData(payload,announcementDate,allowIntraday=false){
   const result=payload?.chart?.result?.[0];
   if(!result)throw new Error(payload?.chart?.error?.description||'لم تصل بيانات سعر صالحة');
   const timestamps=result.timestamp||[],closes=result.indicators?.quote?.[0]?.close||[];
-  const meta=result.meta||{},marketTime=Number(meta.regularMarketTime),sessionStart=Number(meta.currentTradingPeriod?.regular?.start),sessionEnd=Number(meta.currentTradingPeriod?.regular?.end),marketPrice=Number(meta.regularMarketPrice);
-  const nowSeconds=Date.now()/1000,incompleteSessionDate=Number.isFinite(sessionStart)&&Number.isFinite(sessionEnd)&&nowSeconds>=sessionStart&&nowSeconds<sessionEnd?yahooTradingDate(sessionStart):'';
+  const meta=result.meta||{},marketTime=yahooPositiveNumber(meta.regularMarketTime),sessionStart=yahooPositiveNumber(meta.currentTradingPeriod?.regular?.start),sessionEnd=yahooPositiveNumber(meta.currentTradingPeriod?.regular?.end),marketPrice=yahooPositiveNumber(meta.regularMarketPrice);
+  const nowSeconds=Date.now()/1000,incompleteSessionDate=sessionStart!==null&&sessionEnd!==null&&nowSeconds>=sessionStart&&nowSeconds<sessionEnd?yahooTradingDate(sessionStart):'';
   const prices=timestamps.map((timestamp,index)=>({date:yahooTradingDate(timestamp),close:closes[index]})).filter(item=>allowIntraday||item.date!==incompleteSessionDate);
-  // Yahoo can leave the latest Saudi daily Close null even after the session ends.
-  // A thinly traded share may have its last trade shortly before the closing
-  // second, so validate that the session ended and the quote belongs to it.
-  if(Number.isFinite(marketTime)&&Number.isFinite(sessionStart)&&Number.isFinite(sessionEnd)&&(allowIntraday||nowSeconds>=sessionEnd)&&marketTime>=sessionStart&&marketTime<=sessionEnd+3600&&Number.isFinite(marketPrice)){
+  // Yahoo may publish null daily closes while regularMarketPrice still contains
+  // the latest valid trade. During a live refresh, use that quote with its own
+  // trading date even when currentTradingPeriod already points to the next session.
+  const completedSessionQuote=sessionStart!==null&&sessionEnd!==null&&marketTime!==null&&nowSeconds>=sessionEnd&&marketTime>=sessionStart&&marketTime<=sessionEnd+3600;
+  if(marketTime!==null&&marketPrice!==null&&(allowIntraday||completedSessionQuote)){
     prices.push({date:yahooTradingDate(marketTime),close:marketPrice});
   }
-  return {...calculateStockPerformance(prices,announcementDate,meta.currency||'SAR'),livePrice:Boolean(allowIntraday&&incompleteSessionDate)};
+  const performance=calculateStockPerformance(prices,announcementDate,meta.currency||'SAR');
+  return {...performance,livePrice:Boolean(allowIntraday&&incompleteSessionDate&&performance.latestDate===incompleteSessionDate)};
 }
 function yahooHistoryRange(announcementDate){
   const days=Math.max(1,Math.ceil((Date.now()-Date.parse(announcementDate+'T00:00:00Z'))/86400000)+7);
