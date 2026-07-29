@@ -7,8 +7,6 @@
 <meta name="description" content="لوحة عربية لجمع توقعات بيوت الخبرة لأرباح الشركات السعودية الربعية، حساب المتوسط، مقارنة النتائج، وتوقع مواعيد الإعلان.">
 <meta name="theme-color" content="#f4f3ef">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<!-- Generated daily by GitHub Actions. A classic script works from file:// and GitHub Pages without CORS. -->
-<script src="stock-prices.js"></script>
 <style>
 @font-face{font-family:'IBM Plex Sans Arabic';src:local('SF Arabic'),local('.SF Arabic'),local('SF Pro Text');font-display:swap}
 @font-face{font-family:'Cairo';src:local('SF Arabic'),local('.SF Arabic'),local('SF Pro Text');font-display:swap}
@@ -754,7 +752,7 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
  <div id="t7" class="tc" role="tabpanel" aria-hidden="true">
   <section class="dash-hero stock-analysis-hero">
    <div><div class="hero-kicker" id="stockAnalysisKicker">الشركات المعلنة</div><h1 class="hero-title" style="font-size:clamp(21px,2.5vw,30px)">أداء السهم بعد إعلان الأرباح</h1><p class="hero-copy">قارن حركة السهم منذ الإعلان بمفاجأة الأرباح عن متوسط التوقعات وبالنمو عن الربع المماثل.</p></div>
-   <div style="display:grid;justify-items:end;gap:5px"><button class="btn bg" id="stockAnalysisRefreshBtn" type="button" onclick="refreshStockPrices(true)">تحديث أسعار الأسهم</button><span class="stock-price-status" id="stockAnalysisPriceStatus">الأسعار اليومية المحفوظة</span></div>
+   <div style="display:grid;justify-items:end;gap:5px"><button class="btn bg" id="stockAnalysisRefreshBtn" type="button" onclick="refreshStockPrices(true)">تحديث أسعار الأسهم</button><span class="stock-price-status" id="stockAnalysisPriceStatus">جلب مباشر من ياهو فايننس</span></div>
   </section>
   <div class="stock-analysis-stats" id="stockAnalysisStats"></div>
   <section class="tw stock-analysis-card">
@@ -2373,14 +2371,41 @@ const STOCK_PRICE_STORAGE_KEY='finStockPricesV1';
 let _stockPriceCache=null;
 let _stockPricesUpdating=false;
 let _stockAutoAttemptKey='';
-let _workingYahooFallback='';
-const YAHOO_FETCH_TRANSPORTS=[
-  {id:'direct-query1',direct:true,wrap:url=>url},
-  {id:'direct-query2',direct:true,wrap:url=>url.replace('query1.finance.yahoo.com','query2.finance.yahoo.com')},
-  {id:'corsproxy',direct:false,wrap:url=>'https://corsproxy.io/?url='+encodeURIComponent(url)},
-  {id:'allorigins',direct:false,wrap:url=>'https://api.allorigins.win/raw?url='+encodeURIComponent(url)},
-  {id:'codetabs',direct:false,wrap:url=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url)}
-];
+
+/* نفس طريقة المشروع المرفق: Yahoo مباشرة أولاً، ثم الاتصالات الاحتياطية بالترتيب. */
+class YahooPriceService{
+  constructor(){
+    this.proxies=[
+      u=>u,
+      u=>'https://corsproxy.io/?url='+encodeURIComponent(u),
+      u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
+      u=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(u),
+    ];
+    this.workingProxy=null;
+  }
+  async fetchWithFallback(url){
+    const order=this.workingProxy!==null
+      ? [this.proxies[this.workingProxy],...this.proxies.filter((_,i)=>i!==this.workingProxy)]
+      : this.proxies;
+    for(const wrap of order){
+      try{
+        const res=await fetch(wrap(url),{signal:AbortSignal.timeout(12000)});
+        if(!res.ok)continue;
+        const json=await res.json();
+        if(json&&json.chart){
+          this.workingProxy=this.proxies.indexOf(wrap);
+          return json;
+        }
+      }catch(e){/* جرّب التالي */}
+    }
+    throw new Error('تعذر الوصول إلى Yahoo Finance');
+  }
+  async getHistory(ySymbol,range='3mo'){
+    const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ySymbol)}?range=${range}&interval=1d`;
+    return this.fetchWithFallback(url);
+  }
+}
+const yahooPrices=new YahooPriceService();
 
 function todayRiyadhISO(date=new Date()){
   try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
@@ -2433,76 +2458,19 @@ function parseYahooChartData(payload,announcementDate,allowIntraday=false){
   }
   return {...calculateStockPerformance(prices,announcementDate,meta.currency||'SAR'),livePrice:Boolean(allowIntraday&&incompleteSessionDate)};
 }
-function bundledStockPerformance(target){
-  const bundle=window.STOCK_PRICE_DATA,prices=bundle?.prices?.[target.ticker];
-  if(!Array.isArray(prices)||!prices.length)return null;
-  return {...calculateStockPerformance(prices,target.announcementDate,bundle.currency||'SAR'),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:String(bundle.generatedDay||'').slice(0,10)||todayRiyadhISO(),fetchedAt:bundle.generatedAt||'',bundleGeneratedAt:bundle.generatedAt||bundle.generatedDay||'',source:bundle.source||'Yahoo Finance • GitHub Actions',transport:'bundle'};
-}
-function parseStockPriceBundleScript(source){
-  const match=String(source||'').match(/window\.STOCK_PRICE_DATA\s*=\s*(\{[\s\S]*\})\s*;\s*$/);
-  if(!match)return null;
-  try{const bundle=JSON.parse(match[1]);return bundle&&typeof bundle==='object'&&bundle.prices?bundle:null;}catch(e){return null;}
-}
-async function reloadStockPriceBundle(){
-  if(typeof location==='undefined'||location.protocol==='file:'||typeof fetch!=='function')return false;
-  try{
-    const url=new URL('stock-prices.js',location.href);url.searchParams.set('refresh',Date.now());
-    const response=await fetch(url.toString(),{cache:'no-store',credentials:'same-origin'});
-    if(!response.ok)throw new Error('HTTP '+response.status);
-    const bundle=parseStockPriceBundleScript(await response.text());
-    if(!bundle)throw new Error('ملف الأسعار المستلم غير صالح');
-    const oldStamp=window.STOCK_PRICE_DATA?.generatedAt||'',newStamp=bundle.generatedAt||'';
-    if(!oldStamp||newStamp>=oldStamp)window.STOCK_PRICE_DATA=bundle;
-    return newStamp>oldStamp;
-  }catch(e){return false;}
-}
-function yahooChartUrl(ticker,announcementDate,host='query1.finance.yahoo.com'){
-  const start=Math.floor((Date.parse(announcementDate+'T00:00:00Z')-30*86400000)/1000);
-  const end=Math.floor((Date.now()+2*86400000)/1000);
-  return 'https://'+host+'/v8/finance/chart/'+encodeURIComponent(ticker)+'?period1='+start+'&period2='+end+'&interval=1d&events=history';
-}
-function yahooFetchOptions(){
-  const options={credentials:'omit',cache:'no-store'};
-  if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function')options.signal=AbortSignal.timeout(12000);
-  return options;
-}
-function orderedYahooTransports(){
-  const direct=YAHOO_FETCH_TRANSPORTS.filter(route=>route.direct);
-  const fallbacks=YAHOO_FETCH_TRANSPORTS.filter(route=>!route.direct);
-  if(_workingYahooFallback){
-    const preferred=fallbacks.find(route=>route.id===_workingYahooFallback);
-    if(preferred)return [...direct,preferred,...fallbacks.filter(route=>route!==preferred)];
-  }
-  return [...direct,...fallbacks];
-}
-async function fetchYahooChartPayload(url){
-  let lastError=null;
-  for(const route of orderedYahooTransports()){
-    try{
-      const response=await fetch(route.wrap(url),yahooFetchOptions());
-      if(!response.ok)throw new Error('HTTP '+response.status);
-      const payload=await response.json();
-      if(!payload?.chart)throw new Error('استجابة غير صالحة');
-      if(payload.chart.error)throw new Error(payload.chart.error.description||payload.chart.error.code||'خطأ من ياهو فايننس');
-      if(!payload.chart.result?.[0])throw new Error('لم تصل بيانات سعر صالحة');
-      if(!route.direct)_workingYahooFallback=route.id;
-      return {payload,route};
-    }catch(error){lastError=error;}
-  }
-  throw new Error('تعذر الوصول إلى ياهو فايننس: '+String(lastError?.message||lastError||'فشل الاتصال'));
+function yahooHistoryRange(announcementDate){
+  const days=Math.max(1,Math.ceil((Date.now()-Date.parse(announcementDate+'T00:00:00Z'))/86400000)+7);
+  if(days<=80)return '3mo';
+  if(days<=170)return '6mo';
+  if(days<=350)return '1y';
+  if(days<=700)return '2y';
+  if(days<=1750)return '5y';
+  if(days<=3500)return '10y';
+  return 'max';
 }
 async function fetchYahooStockPerformance(target,force=false){
-  let bundled=null,bundleError=null;
-  try{bundled=bundledStockPerformance(target);}catch(error){bundleError=error;}
-  const today=todayRiyadhISO(),bundleDay=String(window.STOCK_PRICE_DATA?.generatedDay||'').slice(0,10);
-  if(bundled&&!force&&bundleDay===today)return bundled;
-  let lastError=null;
-  try{
-    const {payload,route}=await fetchYahooChartPayload(yahooChartUrl(target.ticker,target.announcementDate));
-    return {...parseYahooChartData(payload,target.announcementDate,true),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:today,fetchedAt:new Date().toISOString(),source:route.direct?'Yahoo Finance':'Yahoo Finance • اتصال احتياطي',transport:route.id,fallbackTransport:!route.direct,lastAttemptDay:today,sessionOnly:true};
-  }catch(error){lastError=error;}
-  if(bundled)return {...bundled,lastAttemptDay:today,lastError:String(lastError?.message||lastError||'تعذر الاتصال'),stale:true};
-  throw lastError||bundleError||new Error('تعذر الاتصال بمصدر الأسعار');
+  const payload=await yahooPrices.getHistory(target.ticker,yahooHistoryRange(target.announcementDate));
+  return {...parseYahooChartData(payload,target.announcementDate,true),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:todayRiyadhISO(),fetchedAt:new Date().toISOString(),source:'Yahoo Finance',transport:yahooPrices.workingProxy===0?'direct':'fallback',fallbackTransport:yahooPrices.workingProxy!==0,lastAttemptDay:todayRiyadhISO(),sessionOnly:true};
 }
 function stockPriceTargets(rows=getData(),year=Number(S.yr),quarter=S.qr){
   const seen=new Set(),targets=[];
@@ -2513,37 +2481,8 @@ function setStockPriceStatus(message,busy=false){
   ['stockPriceStatus','stockAnalysisPriceStatus'].forEach(id=>{const status=document.getElementById(id);if(status)status.textContent=message;});
   ['stockRefreshBtn','stockAnalysisRefreshBtn'].forEach(id=>{const button=document.getElementById(id);if(button){button.disabled=busy;button.textContent=busy?'جارٍ تحديث الأسعار…':'تحديث أسعار الأسهم';}});
 }
-function localQuoteApiUrl(targets){
-  if(typeof location==='undefined'||location.protocol!=='http:'||!['127.0.0.1','localhost'].includes(location.hostname))return '';
-  const url=new URL('/api/current-quotes',location.origin);
-  url.searchParams.set('symbols',targets.map(target=>target.ticker).join(','));
-  return url.toString();
-}
-function sessionQuotePerformance(target,quote,payload){
-  const bundled=window.STOCK_PRICE_DATA?.prices?.[target.ticker]||[];
-  const prices=[...(Array.isArray(bundled)?bundled:[]),...(Array.isArray(quote?.prices)?quote.prices:[])];
-  return {...calculateStockPerformance(prices,target.announcementDate,'SAR'),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:todayRiyadhISO(),fetchedAt:payload?.fetchedAt||new Date().toISOString(),source:'Yahoo Finance • جلسة محلية',transport:'session-live',sessionOnly:true,livePrice:Boolean(quote?.live),lastAttemptDay:todayRiyadhISO()};
-}
-async function fetchLocalSessionPrices(targets){
-  const url=localQuoteApiUrl(targets);
-  if(!url)throw new Error('خدمة الأسعار المحلية غير متاحة');
-  const options={cache:'no-store',credentials:'same-origin'};
-  if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function')options.signal=AbortSignal.timeout(20000);
-  const response=await fetch(url,options);
-  const payload=await response.json();
-  if(!response.ok)throw new Error(payload?.error||'HTTP '+response.status);
-  const results={},errors={...(payload.errors||{})};
-  for(const target of targets){
-    const quote=payload.quotes?.[target.ticker];
-    if(!quote)continue;
-    try{results[target.key]=sessionQuotePerformance(target,quote,payload);}
-    catch(error){errors[target.ticker]=String(error?.message||error);}
-  }
-  return {results,errors,elapsedMs:Number(payload.elapsedMs)||0,received:Number(payload.received)||Object.keys(results).length};
-}
 async function refreshStockPrices(force=false){
   if(_stockPricesUpdating)return;
-  await reloadStockPriceBundle();
   const targets=stockPriceTargets();
   if(!targets.length){setStockPriceStatus('لا توجد شركات معلنة ذات رمز تداول في هذا الربع');return;}
   const cache=loadStockPriceCache();
@@ -2552,49 +2491,19 @@ async function refreshStockPrices(force=false){
     return;
   }
   _stockPricesUpdating=true;
-  setStockPriceStatus('عرض الإغلاقات المحفوظة ثم جلب الأسعار الحالية دفعة واحدة…',true);
-  let bundledCount=0;
-  for(const target of targets){
-    try{
-      const bundled=bundledStockPerformance(target);
-      if(bundled){cache[target.key]=bundled;bundledCount++;}
-    }catch(error){}
+  setStockPriceStatus('جارٍ جلب الأسعار مباشرة من ياهو فايننس…',true);
+  let success=0,failures=0;
+  for(let i=0;i<targets.length;i+=4){
+    await Promise.all(targets.slice(i,i+4).map(async target=>{
+      try{cache[target.key]=await fetchYahooStockPerformance(target,true);success++;}
+      catch(error){
+        failures++;
+        const old=cache[target.key];
+        cache[target.key]=old?.beforePrice!=null?{...old,lastError:String(error?.message||error),stale:true}:{ticker:target.ticker,announcementDate:target.announcementDate,error:String(error?.message||error)};
+      }
+    }));
   }
-  renderTable();if(S.tab==='t7')renderStockAnalysisPage();
-  const apiUrl=localQuoteApiUrl(targets);
-  if(apiUrl){
-    try{
-      const batch=await fetchLocalSessionPrices(targets);
-      Object.assign(cache,batch.results);
-      const liveCount=Object.keys(batch.results).length;
-      const retained=targets.filter(target=>!batch.results[target.key]&&cache[target.key]?.beforePrice!=null).length;
-      const failed=targets.length-liveCount-retained;
-      const seconds=(batch.elapsedMs/1000).toFixed(1);
-      const parts=[liveCount+' سعر حالي في '+seconds+' ثانية'];
-      if(retained)parts.push('احتُفظ بإغلاق '+retained+' شركة');
-      if(failed)parts.push('تعذر '+failed);
-      setStockPriceStatus(parts.join(' • '));
-    }catch(error){
-      setStockPriceStatus((bundledCount?'عُرضت الإغلاقات المحفوظة • ':'')+'تعذر الجلب الجماعي: '+String(error?.message||error));
-    }
-  }else{
-    const missing=targets.filter(target=>cache[target.key]?.beforePrice==null);
-    if(typeof location!=='undefined'&&location.protocol==='file:'){
-      for(const target of missing)cache[target.key]={ticker:target.ticker,announcementDate:target.announcementDate,error:'افتح اللوحة بواسطة ملف تشغيل_لوحة_التوقعات.command لجلب السعر الحالي'};
-      setStockPriceStatus('للسرعة افتح اللوحة بواسطة تشغيل_لوحة_التوقعات.command');
-    }else if(missing.length){
-      const settled=await Promise.allSettled(missing.map(target=>fetchYahooStockPerformance(target,true)));
-      settled.forEach((result,index)=>{
-        const target=missing[index];
-        if(result.status==='fulfilled')cache[target.key]=result.value;
-        else cache[target.key]={ticker:target.ticker,announcementDate:target.announcementDate,error:String(result.reason?.message||result.reason)};
-      });
-      const success=settled.filter(result=>result.status==='fulfilled').length;
-      setStockPriceStatus(success+' سعر حالي • '+(missing.length-success)+' تعذر');
-    }else{
-      setStockPriceStatus(bundledCount+' شركة من ملف الأسعار • افتح عبر المشغّل للسعر الحالي');
-    }
-  }
+  setStockPriceStatus(failures===0?'تم تحديث '+success+' سعر مباشرة من ياهو فايننس':'تم تحديث '+success+' سعر • تعذر '+failures);
   saveStockPriceCache();_stockPricesUpdating=false;renderTable();if(S.tab==='t7')renderStockAnalysisPage();
 }
 function scheduleStockPriceRefresh(){
@@ -2625,7 +2534,7 @@ function stockAnalysisPriceItem(target){
   if(!target)return null;
   const cached=loadStockPriceCache()[target.key];
   if(cached?.beforePrice!=null&&cached?.latestPrice!=null)return cached;
-  try{return bundledStockPerformance(target);}catch(e){return null;}
+  return null;
 }
 function getStockAnalysisRows(rows=getData(),year=Number(S.yr),qr=S.qr){
   const seen=new Set(),result=[];
