@@ -2373,6 +2373,14 @@ const STOCK_PRICE_STORAGE_KEY='finStockPricesV1';
 let _stockPriceCache=null;
 let _stockPricesUpdating=false;
 let _stockAutoAttemptKey='';
+let _workingYahooFallback='';
+const YAHOO_FETCH_TRANSPORTS=[
+  {id:'direct-query1',direct:true,wrap:url=>url},
+  {id:'direct-query2',direct:true,wrap:url=>url.replace('query1.finance.yahoo.com','query2.finance.yahoo.com')},
+  {id:'corsproxy',direct:false,wrap:url=>'https://corsproxy.io/?url='+encodeURIComponent(url)},
+  {id:'allorigins',direct:false,wrap:url=>'https://api.allorigins.win/raw?url='+encodeURIComponent(url)},
+  {id:'codetabs',direct:false,wrap:url=>'https://api.codetabs.com/v1/proxy?quest='+encodeURIComponent(url)}
+];
 
 function todayRiyadhISO(date=new Date()){
   try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
@@ -2382,10 +2390,13 @@ function yahooTickerForCompany(name){const symbol=getCompanySymbol(name);return 
 function stockPriceCacheKey(name,announcementDate){return yahooTickerForCompany(name)+'|'+announcementDate;}
 function loadStockPriceCache(){
   if(_stockPriceCache)return _stockPriceCache;
-  try{_stockPriceCache=JSON.parse(localStorage.getItem(STOCK_PRICE_STORAGE_KEY)||'{}')||{};}catch(e){_stockPriceCache={};}
+  _stockPriceCache={};
+  // Prices belong to this page session only. Remove the old persistent cache so
+  // reopening the dashboard always requests a fresh current quote.
+  try{localStorage.removeItem(STOCK_PRICE_STORAGE_KEY);}catch(e){}
   return _stockPriceCache;
 }
-function saveStockPriceCache(){try{localStorage.setItem(STOCK_PRICE_STORAGE_KEY,JSON.stringify(loadStockPriceCache()));}catch(e){}}
+function saveStockPriceCache(){}
 function stockPriceTarget(name,year,quarter){
   const company=canonicalCompany(name),prediction=predictionForCompany(company,year,quarter),ticker=yahooTickerForCompany(company);
   if(!ticker||!prediction?.confirmed||!prediction.date||prediction.date>todayRiyadhISO())return null;
@@ -2407,24 +2418,25 @@ function calculateStockPerformance(prices,announcementDate,currency='SAR'){
   const calendarDays=Math.max(0,Math.round((Date.parse(latest.date+'T12:00:00Z')-Date.parse(announcementDate+'T12:00:00Z'))/86400000));
   return {beforePrice:before.close,beforeDate:before.date,latestPrice:latest.close,latestDate:latest.date,change,sessions:after.length,calendarDays,currency};
 }
-function parseYahooChartData(payload,announcementDate){
+function parseYahooChartData(payload,announcementDate,allowIntraday=false){
   const result=payload?.chart?.result?.[0];
   if(!result)throw new Error(payload?.chart?.error?.description||'لم تصل بيانات سعر صالحة');
   const timestamps=result.timestamp||[],closes=result.indicators?.quote?.[0]?.close||[];
-  const prices=timestamps.map((timestamp,index)=>({date:yahooTradingDate(timestamp),close:closes[index]}));
   const meta=result.meta||{},marketTime=Number(meta.regularMarketTime),sessionStart=Number(meta.currentTradingPeriod?.regular?.start),sessionEnd=Number(meta.currentTradingPeriod?.regular?.end),marketPrice=Number(meta.regularMarketPrice);
+  const nowSeconds=Date.now()/1000,incompleteSessionDate=Number.isFinite(sessionStart)&&Number.isFinite(sessionEnd)&&nowSeconds>=sessionStart&&nowSeconds<sessionEnd?yahooTradingDate(sessionStart):'';
+  const prices=timestamps.map((timestamp,index)=>({date:yahooTradingDate(timestamp),close:closes[index]})).filter(item=>allowIntraday||item.date!==incompleteSessionDate);
   // Yahoo can leave the latest Saudi daily Close null even after the session ends.
   // A thinly traded share may have its last trade shortly before the closing
   // second, so validate that the session ended and the quote belongs to it.
-  if(Number.isFinite(marketTime)&&Number.isFinite(sessionStart)&&Number.isFinite(sessionEnd)&&Date.now()/1000>=sessionEnd&&marketTime>=sessionStart&&marketTime<=sessionEnd+3600&&Number.isFinite(marketPrice)){
+  if(Number.isFinite(marketTime)&&Number.isFinite(sessionStart)&&Number.isFinite(sessionEnd)&&(allowIntraday||nowSeconds>=sessionEnd)&&marketTime>=sessionStart&&marketTime<=sessionEnd+3600&&Number.isFinite(marketPrice)){
     prices.push({date:yahooTradingDate(marketTime),close:marketPrice});
   }
-  return calculateStockPerformance(prices,announcementDate,meta.currency||'SAR');
+  return {...calculateStockPerformance(prices,announcementDate,meta.currency||'SAR'),livePrice:Boolean(allowIntraday&&incompleteSessionDate)};
 }
 function bundledStockPerformance(target){
   const bundle=window.STOCK_PRICE_DATA,prices=bundle?.prices?.[target.ticker];
   if(!Array.isArray(prices)||!prices.length)return null;
-  return {...calculateStockPerformance(prices,target.announcementDate,bundle.currency||'SAR'),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:String(bundle.generatedDay||'').slice(0,10)||todayRiyadhISO(),fetchedAt:bundle.generatedAt||'',bundleGeneratedAt:bundle.generatedAt||bundle.generatedDay||'',source:bundle.source||'Yahoo Finance • GitHub Actions'};
+  return {...calculateStockPerformance(prices,target.announcementDate,bundle.currency||'SAR'),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:String(bundle.generatedDay||'').slice(0,10)||todayRiyadhISO(),fetchedAt:bundle.generatedAt||'',bundleGeneratedAt:bundle.generatedAt||bundle.generatedDay||'',source:bundle.source||'Yahoo Finance • GitHub Actions',transport:'bundle'};
 }
 function parseStockPriceBundleScript(source){
   const match=String(source||'').match(/window\.STOCK_PRICE_DATA\s*=\s*(\{[\s\S]*\})\s*;\s*$/);
@@ -2449,20 +2461,47 @@ function yahooChartUrl(ticker,announcementDate,host='query1.finance.yahoo.com'){
   const end=Math.floor((Date.now()+2*86400000)/1000);
   return 'https://'+host+'/v8/finance/chart/'+encodeURIComponent(ticker)+'?period1='+start+'&period2='+end+'&interval=1d&events=history';
 }
+function yahooFetchOptions(){
+  const options={credentials:'omit',cache:'no-store'};
+  if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function')options.signal=AbortSignal.timeout(12000);
+  return options;
+}
+function orderedYahooTransports(){
+  const direct=YAHOO_FETCH_TRANSPORTS.filter(route=>route.direct);
+  const fallbacks=YAHOO_FETCH_TRANSPORTS.filter(route=>!route.direct);
+  if(_workingYahooFallback){
+    const preferred=fallbacks.find(route=>route.id===_workingYahooFallback);
+    if(preferred)return [...direct,preferred,...fallbacks.filter(route=>route!==preferred)];
+  }
+  return [...direct,...fallbacks];
+}
+async function fetchYahooChartPayload(url){
+  let lastError=null;
+  for(const route of orderedYahooTransports()){
+    try{
+      const response=await fetch(route.wrap(url),yahooFetchOptions());
+      if(!response.ok)throw new Error('HTTP '+response.status);
+      const payload=await response.json();
+      if(!payload?.chart)throw new Error('استجابة غير صالحة');
+      if(payload.chart.error)throw new Error(payload.chart.error.description||payload.chart.error.code||'خطأ من ياهو فايننس');
+      if(!payload.chart.result?.[0])throw new Error('لم تصل بيانات سعر صالحة');
+      if(!route.direct)_workingYahooFallback=route.id;
+      return {payload,route};
+    }catch(error){lastError=error;}
+  }
+  throw new Error('تعذر الوصول إلى ياهو فايننس: '+String(lastError?.message||lastError||'فشل الاتصال'));
+}
 async function fetchYahooStockPerformance(target,force=false){
   let bundled=null,bundleError=null;
   try{bundled=bundledStockPerformance(target);}catch(error){bundleError=error;}
   const today=todayRiyadhISO(),bundleDay=String(window.STOCK_PRICE_DATA?.generatedDay||'').slice(0,10);
   if(bundled&&!force&&bundleDay===today)return bundled;
   let lastError=null;
-  for(const host of ['query1.finance.yahoo.com','query2.finance.yahoo.com']){
-    try{
-      const response=await fetch(yahooChartUrl(target.ticker,target.announcementDate,host),{credentials:'omit',cache:'no-store'});
-      if(!response.ok)throw new Error('HTTP '+response.status);
-      return {...parseYahooChartData(await response.json(),target.announcementDate),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:today,fetchedAt:new Date().toISOString(),source:'Yahoo Finance',lastAttemptDay:today};
-    }catch(error){lastError=error;}
-  }
-  if(bundled)return {...bundled,lastAttemptDay:today,lastError:String(lastError?.message||lastError||'تعذر الاتصال المباشر'),stale:true};
+  try{
+    const {payload,route}=await fetchYahooChartPayload(yahooChartUrl(target.ticker,target.announcementDate));
+    return {...parseYahooChartData(payload,target.announcementDate,true),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:today,fetchedAt:new Date().toISOString(),source:route.direct?'Yahoo Finance':'Yahoo Finance • اتصال احتياطي',transport:route.id,fallbackTransport:!route.direct,lastAttemptDay:today,sessionOnly:true};
+  }catch(error){lastError=error;}
+  if(bundled)return {...bundled,lastAttemptDay:today,lastError:String(lastError?.message||lastError||'تعذر الاتصال'),stale:true};
   throw lastError||bundleError||new Error('تعذر الاتصال بمصدر الأسعار');
 }
 function stockPriceTargets(rows=getData(),year=Number(S.yr),quarter=S.qr){
@@ -2474,44 +2513,94 @@ function setStockPriceStatus(message,busy=false){
   ['stockPriceStatus','stockAnalysisPriceStatus'].forEach(id=>{const status=document.getElementById(id);if(status)status.textContent=message;});
   ['stockRefreshBtn','stockAnalysisRefreshBtn'].forEach(id=>{const button=document.getElementById(id);if(button){button.disabled=busy;button.textContent=busy?'جارٍ تحديث الأسعار…':'تحديث أسعار الأسهم';}});
 }
+function localQuoteApiUrl(targets){
+  if(typeof location==='undefined'||location.protocol!=='http:'||!['127.0.0.1','localhost'].includes(location.hostname))return '';
+  const url=new URL('/api/current-quotes',location.origin);
+  url.searchParams.set('symbols',targets.map(target=>target.ticker).join(','));
+  return url.toString();
+}
+function sessionQuotePerformance(target,quote,payload){
+  const bundled=window.STOCK_PRICE_DATA?.prices?.[target.ticker]||[];
+  const prices=[...(Array.isArray(bundled)?bundled:[]),...(Array.isArray(quote?.prices)?quote.prices:[])];
+  return {...calculateStockPerformance(prices,target.announcementDate,'SAR'),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:todayRiyadhISO(),fetchedAt:payload?.fetchedAt||new Date().toISOString(),source:'Yahoo Finance • جلسة محلية',transport:'session-live',sessionOnly:true,livePrice:Boolean(quote?.live),lastAttemptDay:todayRiyadhISO()};
+}
+async function fetchLocalSessionPrices(targets){
+  const url=localQuoteApiUrl(targets);
+  if(!url)throw new Error('خدمة الأسعار المحلية غير متاحة');
+  const options={cache:'no-store',credentials:'same-origin'};
+  if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function')options.signal=AbortSignal.timeout(20000);
+  const response=await fetch(url,options);
+  const payload=await response.json();
+  if(!response.ok)throw new Error(payload?.error||'HTTP '+response.status);
+  const results={},errors={...(payload.errors||{})};
+  for(const target of targets){
+    const quote=payload.quotes?.[target.ticker];
+    if(!quote)continue;
+    try{results[target.key]=sessionQuotePerformance(target,quote,payload);}
+    catch(error){errors[target.ticker]=String(error?.message||error);}
+  }
+  return {results,errors,elapsedMs:Number(payload.elapsedMs)||0,received:Number(payload.received)||Object.keys(results).length};
+}
 async function refreshStockPrices(force=false){
   if(_stockPricesUpdating)return;
   await reloadStockPriceBundle();
   const targets=stockPriceTargets();
   if(!targets.length){setStockPriceStatus('لا توجد شركات معلنة ذات رمز تداول في هذا الربع');return;}
-  const cache=loadStockPriceCache(),today=todayRiyadhISO();
-  const bundleStamp=window.STOCK_PRICE_DATA?.generatedAt||window.STOCK_PRICE_DATA?.generatedDay||'';
-  const pending=force?targets:targets.filter(target=>{
-    const item=cache[target.key],hasBundledPrice=Array.isArray(window.STOCK_PRICE_DATA?.prices?.[target.ticker]);
-    if(hasBundledPrice&&bundleStamp&&item?.bundleGeneratedAt!==bundleStamp)return true;
-    return item?.fetchedDay!==today&&item?.lastAttemptDay!==today;
-  });
-  if(!pending.length){const updated=targets.filter(target=>cache[target.key]?.fetchedDay===today).length,failed=targets.filter(target=>cache[target.key]?.lastAttemptDay===today&&cache[target.key]?.fetchedDay!==today).length;setStockPriceStatus(updated?'الأسعار محدثة اليوم • '+updated+' شركة':failed?'تعذر التحديث اليوم • أعد المحاولة لاحقًا':'لا توجد أسعار تحتاج إلى تحديث');renderTable();if(S.tab==='t7')renderStockAnalysisPage();return;}
-  _stockPricesUpdating=true;setStockPriceStatus('تحديث 0 من '+pending.length+' شركة',true);
-  let cursor=0,done=0,failed=0,stale=0;
-  const worker=async()=>{
-    while(cursor<pending.length){
-      const target=pending[cursor++];
-      try{
-        const updated=await fetchYahooStockPerformance(target,force);
-        cache[target.key]=updated;
-        if(updated.stale)stale++;
-      }catch(error){
-        failed++;
-        const previous=cache[target.key]||{},retained=previous.beforePrice==null?{}:previous;
-        cache[target.key]={...retained,ticker:target.ticker,announcementDate:target.announcementDate,lastAttemptDay:today,lastError:String(error?.message||error),error:previous.beforePrice==null?String(error?.message||error):undefined};
-      }
-      done++;setStockPriceStatus('تحديث '+done+' من '+pending.length+' شركة',true);
-      if(cursor<pending.length)await new Promise(resolve=>setTimeout(resolve,350));
+  const cache=loadStockPriceCache();
+  if(!force&&targets.every(target=>cache[target.key]?.sessionOnly)){
+    setStockPriceStatus('الأسعار الحالية محفوظة في هذه الجلسة • '+targets.length+' شركة');
+    return;
+  }
+  _stockPricesUpdating=true;
+  setStockPriceStatus('عرض الإغلاقات المحفوظة ثم جلب الأسعار الحالية دفعة واحدة…',true);
+  let bundledCount=0;
+  for(const target of targets){
+    try{
+      const bundled=bundledStockPerformance(target);
+      if(bundled){cache[target.key]=bundled;bundledCount++;}
+    }catch(error){}
+  }
+  renderTable();if(S.tab==='t7')renderStockAnalysisPage();
+  const apiUrl=localQuoteApiUrl(targets);
+  if(apiUrl){
+    try{
+      const batch=await fetchLocalSessionPrices(targets);
+      Object.assign(cache,batch.results);
+      const liveCount=Object.keys(batch.results).length;
+      const retained=targets.filter(target=>!batch.results[target.key]&&cache[target.key]?.beforePrice!=null).length;
+      const failed=targets.length-liveCount-retained;
+      const seconds=(batch.elapsedMs/1000).toFixed(1);
+      const parts=[liveCount+' سعر حالي في '+seconds+' ثانية'];
+      if(retained)parts.push('احتُفظ بإغلاق '+retained+' شركة');
+      if(failed)parts.push('تعذر '+failed);
+      setStockPriceStatus(parts.join(' • '));
+    }catch(error){
+      setStockPriceStatus((bundledCount?'عُرضت الإغلاقات المحفوظة • ':'')+'تعذر الجلب الجماعي: '+String(error?.message||error));
     }
-  };
-  await worker();
+  }else{
+    const missing=targets.filter(target=>cache[target.key]?.beforePrice==null);
+    if(typeof location!=='undefined'&&location.protocol==='file:'){
+      for(const target of missing)cache[target.key]={ticker:target.ticker,announcementDate:target.announcementDate,error:'افتح اللوحة بواسطة ملف تشغيل_لوحة_التوقعات.command لجلب السعر الحالي'};
+      setStockPriceStatus('للسرعة افتح اللوحة بواسطة تشغيل_لوحة_التوقعات.command');
+    }else if(missing.length){
+      const settled=await Promise.allSettled(missing.map(target=>fetchYahooStockPerformance(target,true)));
+      settled.forEach((result,index)=>{
+        const target=missing[index];
+        if(result.status==='fulfilled')cache[target.key]=result.value;
+        else cache[target.key]={ticker:target.ticker,announcementDate:target.announcementDate,error:String(result.reason?.message||result.reason)};
+      });
+      const success=settled.filter(result=>result.status==='fulfilled').length;
+      setStockPriceStatus(success+' سعر حالي • '+(missing.length-success)+' تعذر');
+    }else{
+      setStockPriceStatus(bundledCount+' شركة من ملف الأسعار • افتح عبر المشغّل للسعر الحالي');
+    }
+  }
   saveStockPriceCache();_stockPricesUpdating=false;renderTable();if(S.tab==='t7')renderStockAnalysisPage();
-  const success=pending.length-failed-stale;
-  setStockPriceStatus((success?success+' شركة محدثة مباشرة':'لم يصل سعر مباشر')+(stale?' • احتُفظ بسعر '+stale+' شركة':'')+(failed?' • تعذر '+failed:''));
 }
 function scheduleStockPriceRefresh(){
-  const key=S.yr+'_'+S.qr+'_'+todayRiyadhISO();
+  const targets=stockPriceTargets();
+  const signature=targets.map(target=>target.key).sort().join(',');
+  const key=S.yr+'_'+S.qr+'_'+todayRiyadhISO()+'_'+signature;
   if(_stockAutoAttemptKey===key||_stockPricesUpdating)return;
   _stockAutoAttemptKey=key;setTimeout(()=>refreshStockPrices(false),120);
 }
@@ -2519,11 +2608,12 @@ function renderStockPerformanceCell(row){
   const target=stockPriceTarget(row.name,Number(S.yr),S.qr);
   if(!target)return '<td class="stock-performance-cell"><span class="stock-waiting">يظهر بعد تأكيد الإعلان</span></td>';
   const item=loadStockPriceCache()[target.key];
-  if(!item||item.beforePrice==null||item.latestPrice==null)return '<td class="stock-performance-cell"><span class="stock-waiting">'+(item?.error?'تعذر جلب السعر؛ أعد المحاولة لاحقًا':'بانتظار تحديث السعر')+'</span></td>';
+  if(!item||item.beforePrice==null||item.latestPrice==null)return '<td class="stock-performance-cell"><span class="stock-waiting">'+(item?.error?esc(String(item.error)):'بانتظار تحديث السعر')+'</span></td>';
   const positive=item.change>=0,change=(positive?'+':'')+(item.change*100).toFixed(2)+'%',price=x=>Number(x).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  return '<td class="stock-performance-cell"><div class="stock-performance" title="إغلاقات يومية من ياهو فايننس • السعر المرجعي هو إغلاق آخر جلسة قبل الإعلان">'+
+  const latestLabel=item.livePrice?'السعر الحالي':'آخر إغلاق',latestSuffix=item.livePrice?' • لحظي':'';
+  return '<td class="stock-performance-cell"><div class="stock-performance" title="أسعار من ياهو فايننس • السعر المرجعي هو إغلاق آخر جلسة قبل الإعلان">'+
     '<div class="stock-performance-top"><div class="stock-performance-change"><span class="stock-change-caption">التغيير</span><span class="badge '+(positive?'bp':'bn')+'">'+change+'</span></div><span class="stock-session-count">'+item.sessions+' جلسة • '+item.calendarDays+' يوم</span></div>'+
-    '<div class="stock-price-flow"><div class="stock-price-point"><span class="stock-price-label">قبل الإعلان</span><strong>'+price(item.beforePrice)+'</strong><span class="stock-price-date">'+formatShortDate(item.beforeDate)+'</span></div><span class="stock-price-arrow">←</span><div class="stock-price-point current"><span class="stock-price-label">آخر إغلاق</span><strong>'+price(item.latestPrice)+'</strong><span class="stock-price-date">'+formatShortDate(item.latestDate)+(item.lastError?' • لم يتحدث اليوم':'')+'</span></div></div></div></td>';
+    '<div class="stock-price-flow"><div class="stock-price-point"><span class="stock-price-label">قبل الإعلان</span><strong>'+price(item.beforePrice)+'</strong><span class="stock-price-date">'+formatShortDate(item.beforeDate)+'</span></div><span class="stock-price-arrow">←</span><div class="stock-price-point current"><span class="stock-price-label">'+latestLabel+'</span><strong>'+price(item.latestPrice)+'</strong><span class="stock-price-date">'+formatShortDate(item.latestDate)+latestSuffix+(item.lastError?' • لم يتحدث اليوم':'')+'</span></div></div></div></td>';
 }
 function stockPerformanceSortValue(row,year=Number(S.yr),qr=S.qr){
   const target=stockPriceTarget(row.name,year,qr),item=target?loadStockPriceCache()[target.key]:null;
@@ -2548,7 +2638,7 @@ function getStockAnalysisRows(rows=getData(),year=Number(S.yr),qr=S.qr){
     const stockChange=Number(priceItem.change);if(!Number.isFinite(stockChange))continue;
     const forecastChange=sourceRow.avg!=null&&sourceRow.avg!==0?(sourceRow.actual-sourceRow.avg)/Math.abs(sourceRow.avg):null;
     const comparableChange=sourceRow.prev!=null&&sourceRow.prev!==0?(sourceRow.actual-sourceRow.prev)/Math.abs(sourceRow.prev):null;
-    result.push({name,symbol:getCompanySymbol(name),sector:getCompanySector(name),announcementDate:target.announcementDate,beforePrice:Number(priceItem.beforePrice),beforeDate:priceItem.beforeDate,latestPrice:Number(priceItem.latestPrice),latestDate:priceItem.latestDate,stockChange,sessions:Number(priceItem.sessions)||0,calendarDays:Number(priceItem.calendarDays)||0,actual:sourceRow.actual,average:sourceRow.avg,previous:sourceRow.prev,forecastChange,comparableChange});
+    result.push({name,symbol:getCompanySymbol(name),sector:getCompanySector(name),announcementDate:target.announcementDate,beforePrice:Number(priceItem.beforePrice),beforeDate:priceItem.beforeDate,latestPrice:Number(priceItem.latestPrice),latestDate:priceItem.latestDate,livePrice:Boolean(priceItem.livePrice),stockChange,sessions:Number(priceItem.sessions)||0,calendarDays:Number(priceItem.calendarDays)||0,actual:sourceRow.actual,average:sourceRow.avg,previous:sourceRow.prev,forecastChange,comparableChange});
   }
   return result;
 }
@@ -2583,13 +2673,13 @@ function renderStockAnalysisPage(){
   let rows=getStockAnalysisRows().filter(row=>(!search||row.name.includes(search)||String(row.symbol||'').includes(search)||String(row.sector||'').includes(search))&&stockAnalysisMetricMatches(row.stockChange,stockFilter)&&stockAnalysisMetricMatches(row.forecastChange,forecastFilter)&&stockAnalysisMetricMatches(row.comparableChange,comparableFilter));
   const key=_stockAnalysisSortKey,mode=_stockAnalysisSortMode;
   if(mode!=='none')rows=[...rows].sort((a,b)=>{const av=a[key],bv=b[key];if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return -1;return mode==='desc'?bv-av:av-bv;});
-  head.innerHTML='<th>الشركة</th><th>تاريخ الإعلان</th><th>السعر قبل الإعلان</th><th>آخر إغلاق</th><th>'+stockAnalysisSortButton('stockChange','تغير السهم')+'</th><th>'+stockAnalysisSortButton('forecastChange','عن التوقعات')+'</th><th>'+stockAnalysisSortButton('comparableChange','عن المماثل')+'</th>';
+  head.innerHTML='<th>الشركة</th><th>تاريخ الإعلان</th><th>السعر قبل الإعلان</th><th>السعر الحالي / آخر إغلاق</th><th>'+stockAnalysisSortButton('stockChange','تغير السهم')+'</th><th>'+stockAnalysisSortButton('forecastChange','عن التوقعات')+'</th><th>'+stockAnalysisSortButton('comparableChange','عن المماثل')+'</th>';
   const average=rows.length?rows.reduce((sum,row)=>sum+row.stockChange,0)/rows.length:null,stockUp=rows.filter(row=>row.stockChange>=0).length,beat=rows.filter(row=>row.forecastChange!=null&&row.forecastChange>=0).length,growth=rows.filter(row=>row.comparableChange!=null&&row.comparableChange>=0).length,percent=value=>value==null?'—':(value>=0?'+':'')+(value*100).toFixed(2)+'%';
   stats.innerHTML='<div class="stock-analysis-stat"><span>الشركات المعروضة</span><strong>'+rows.length+'</strong></div><div class="stock-analysis-stat '+(average==null?'':average>=0?'positive':'negative')+'"><span>متوسط تغير السهم</span><strong>'+percent(average)+'</strong></div><div class="stock-analysis-stat positive"><span>ارتفع سهمها</span><strong>'+stockUp+'</strong></div><div class="stock-analysis-stat positive"><span>فاقت التوقعات • نمت عن المماثل</span><strong>'+beat+' • '+growth+'</strong></div>';
   const kicker=document.getElementById('stockAnalysisKicker');if(kicker)kicker.textContent=QL[S.qr]+' '+S.yr+' • '+rows.length+' شركة معلنة';
   if(!rows.length){body.innerHTML='<tr><td colspan="7"><div class="empty"><div class="empty-ic" aria-hidden="true">—</div><div class="empty-title">لا توجد شركات مطابقة</div><div class="empty-copy">غيّر عوامل التصفية أو حدّث أسعار الأسهم. تظهر هنا الشركات التي أعلنت ولديها توقعات وسعر قبل الإعلان.</div></div></td></tr>';return;}
   const price=value=>Number(value).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  body.innerHTML=rows.map(row=>'<tr><td class="company-cell"><div class="stock-analysis-company"><strong>'+esc(row.name)+'</strong><small>'+esc(String(row.symbol||'—'))+' • '+esc(row.sector||'—')+'</small></div></td><td><div class="stock-analysis-price"><strong>'+formatShortDate(row.announcementDate)+'</strong><small>إعلان مؤكد</small></div></td><td><div class="stock-analysis-price"><strong>'+price(row.beforePrice)+'</strong><small>'+formatShortDate(row.beforeDate)+'</small></div></td><td><div class="stock-analysis-price"><strong>'+price(row.latestPrice)+'</strong><small>'+formatShortDate(row.latestDate)+'</small></div></td><td><div class="stock-analysis-metric">'+stockAnalysisPctBadge(row.stockChange,2)+'<small>'+row.sessions+' جلسة • '+row.calendarDays+' يوم</small></div></td><td><div class="stock-analysis-metric">'+stockAnalysisPctBadge(row.forecastChange)+'<small>فعلي '+fmt(row.actual)+' • توقع '+fmt(row.average)+'</small></div></td><td><div class="stock-analysis-metric">'+stockAnalysisPctBadge(row.comparableChange)+'<small>فعلي '+fmt(row.actual)+' • مماثل '+fmt(row.previous)+'</small></div></td></tr>').join('');
+  body.innerHTML=rows.map(row=>'<tr><td class="company-cell"><div class="stock-analysis-company"><strong>'+esc(row.name)+'</strong><small>'+esc(String(row.symbol||'—'))+' • '+esc(row.sector||'—')+'</small></div></td><td><div class="stock-analysis-price"><strong>'+formatShortDate(row.announcementDate)+'</strong><small>إعلان مؤكد</small></div></td><td><div class="stock-analysis-price"><strong>'+price(row.beforePrice)+'</strong><small>'+formatShortDate(row.beforeDate)+'</small></div></td><td><div class="stock-analysis-price"><strong>'+price(row.latestPrice)+'</strong><small>'+formatShortDate(row.latestDate)+(row.livePrice?' • لحظي':'')+'</small></div></td><td><div class="stock-analysis-metric">'+stockAnalysisPctBadge(row.stockChange,2)+'<small>'+row.sessions+' جلسة • '+row.calendarDays+' يوم</small></div></td><td><div class="stock-analysis-metric">'+stockAnalysisPctBadge(row.forecastChange)+'<small>فعلي '+fmt(row.actual)+' • توقع '+fmt(row.average)+'</small></div></td><td><div class="stock-analysis-metric">'+stockAnalysisPctBadge(row.comparableChange)+'<small>فعلي '+fmt(row.actual)+' • مماثل '+fmt(row.previous)+'</small></div></td></tr>').join('');
 }
 function announcementSortValue(row,year=Number(S.yr),qr=S.qr){const prediction=predictionForCompany(row.name,year,qr);const date=prediction?.date?parseLocalDate(prediction.date):null;return date?date.getTime():null;}
 function predictionForCompany(name,year,qr){
