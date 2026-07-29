@@ -2404,6 +2404,20 @@ class YahooPriceService{
     const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ySymbol)}?range=${range}&interval=1d`;
     return this.fetchWithFallback(url);
   }
+  async getIntradayClose(ySymbol,date){
+    const period1=Math.floor(Date.parse(date+'T00:00:00Z')/1000);
+    const period2=period1+86400;
+    const url=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ySymbol)}?period1=${period1}&period2=${period2}&interval=1m`;
+    const json=await this.fetchWithFallback(url);
+    const result=json.chart?.result?.[0],timestamps=result?.timestamp||[],closes=result?.indicators?.quote?.[0]?.close||[];
+    let close=null;
+    for(let i=0;i<timestamps.length;i++){
+      const value=yahooPositiveNumber(closes[i]);
+      if(value!==null&&yahooTradingDate(timestamps[i])===date)close=value;
+    }
+    if(close===null)throw new Error('تعذر استعادة إغلاق جلسة '+date+' للسهم '+ySymbol);
+    return {date,close};
+  }
 }
 const yahooPrices=new YahooPriceService();
 
@@ -2448,13 +2462,20 @@ function calculateStockPerformance(prices,announcementDate,currency='SAR'){
   const calendarDays=Math.max(0,Math.round((Date.parse(latest.date+'T12:00:00Z')-Date.parse(announcementDate+'T12:00:00Z'))/86400000));
   return {beforePrice:before.close,beforeDate:before.date,latestPrice:latest.close,latestDate:latest.date,change,sessions:after.length,calendarDays,currency};
 }
-function parseYahooChartData(payload,announcementDate,allowIntraday=false){
+function missingDailyCloseBeforeAnnouncement(payload,announcementDate){
+  const result=payload?.chart?.result?.[0],timestamps=result?.timestamp||[],closes=result?.indicators?.quote?.[0]?.close||[];
+  const rows=timestamps.map((timestamp,index)=>({date:yahooTradingDate(timestamp),close:closes[index]})).filter(item=>item.date<announcementDate).sort((a,b)=>a.date.localeCompare(b.date));
+  const latest=rows.at(-1);
+  return latest&&yahooPositiveNumber(latest.close)===null?latest.date:'';
+}
+function parseYahooChartData(payload,announcementDate,allowIntraday=false,recoveredPrices=[]){
   const result=payload?.chart?.result?.[0];
   if(!result)throw new Error(payload?.chart?.error?.description||'لم تصل بيانات سعر صالحة');
   const timestamps=result.timestamp||[],closes=result.indicators?.quote?.[0]?.close||[];
   const meta=result.meta||{},marketTime=yahooPositiveNumber(meta.regularMarketTime),sessionStart=yahooPositiveNumber(meta.currentTradingPeriod?.regular?.start),sessionEnd=yahooPositiveNumber(meta.currentTradingPeriod?.regular?.end),marketPrice=yahooPositiveNumber(meta.regularMarketPrice);
   const nowSeconds=Date.now()/1000,incompleteSessionDate=sessionStart!==null&&sessionEnd!==null&&nowSeconds>=sessionStart&&nowSeconds<sessionEnd?yahooTradingDate(sessionStart):'';
   const prices=timestamps.map((timestamp,index)=>({date:yahooTradingDate(timestamp),close:closes[index]})).filter(item=>allowIntraday||item.date!==incompleteSessionDate);
+  prices.push(...(recoveredPrices||[]));
   // Yahoo may publish null daily closes while regularMarketPrice still contains
   // the latest valid trade. During a live refresh, use that quote with its own
   // trading date even when currentTradingPeriod already points to the next session.
@@ -2477,7 +2498,9 @@ function yahooHistoryRange(announcementDate){
 }
 async function fetchYahooStockPerformance(target,force=false){
   const payload=await yahooPrices.getHistory(target.ticker,yahooHistoryRange(target.announcementDate));
-  return {...parseYahooChartData(payload,target.announcementDate,true),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:todayRiyadhISO(),fetchedAt:new Date().toISOString(),source:'Yahoo Finance',transport:yahooPrices.workingProxy===0?'direct':'fallback',fallbackTransport:yahooPrices.workingProxy!==0,lastAttemptDay:todayRiyadhISO(),sessionOnly:true};
+  const missingDate=missingDailyCloseBeforeAnnouncement(payload,target.announcementDate);
+  const recoveredPrices=missingDate?[await yahooPrices.getIntradayClose(target.ticker,missingDate)]:[];
+  return {...parseYahooChartData(payload,target.announcementDate,true,recoveredPrices),ticker:target.ticker,announcementDate:target.announcementDate,fetchedDay:todayRiyadhISO(),fetchedAt:new Date().toISOString(),source:'Yahoo Finance',transport:yahooPrices.workingProxy===0?'direct':'fallback',fallbackTransport:yahooPrices.workingProxy!==0,lastAttemptDay:todayRiyadhISO(),sessionOnly:true};
 }
 function stockPriceTargets(rows=getData(),year=Number(S.yr),quarter=S.qr){
   const seen=new Set(),targets=[];
