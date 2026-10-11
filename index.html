@@ -82,6 +82,14 @@ tbody tr:last-child td{border-bottom:none}
 .ei:last-child{border-bottom:none}.ei:hover{background:var(--hov)}
 .ei.on{background:rgba(212,168,83,.09);border-right:3px solid var(--gold)}
 .en{font-size:13px;font-weight:500}.ea{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600}
+.exp-period-note{padding:9px 14px;border-bottom:1px solid var(--b1);color:var(--t2);font-size:11px;line-height:1.6}
+.ei.exp-entry{display:block;padding:10px 14px}
+.exp-entry-head,.exp-entry-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.exp-entry-meta{margin-top:6px;color:var(--t2);font-size:11px}
+.exp-forecast-status{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:5px;padding:3px 6px;font-size:10px;font-weight:700}
+.exp-forecast-status.is-added{color:var(--grn);background:color-mix(in srgb,var(--grn) 10%,transparent)}
+.exp-forecast-status.is-missing{color:var(--t2);background:var(--surface-muted)}
+.exp-status-icon{font-size:12px;line-height:1}
 .ahi{color:var(--grn)}.ami{color:var(--gold)}.alo{color:var(--red)}
 .ed{background:var(--card);border:1px solid var(--b1);border-radius:14px;overflow:hidden}
 .ed-h{padding:16px 19px;border-bottom:1px solid var(--b1);display:flex;align-items:center;justify-content:space-between}
@@ -779,6 +787,7 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
           </select>
         </div>
       </div>
+      <p class="exp-period-note" id="expPeriodNote"></p>
       <div id="expList"></div></div>
    <div class="ed" id="expDet"><div class="empty"><div class="empty-ic" aria-hidden="true">—</div><div class="empty-title">اختر بيت خبرة لعرض سجلّه</div><div class="empty-copy">ستظهر الشركات المغطاة، دقة التوقعات، وأبرز النتائج المتاحة للربع المحدد.</div></div></div>
   </div>
@@ -1943,6 +1952,7 @@ function openActualModal(name) {
 
 function renderExpList() {
   const d = getData();
+  document.getElementById('expPeriodNote').textContent = 'حالة التوقعات المسجلة في ' + QL[S.qr] + ' ' + S.yr + '، لجميع القطاعات';
   const sf = document.getElementById('expSecFilter');
   if (sf) {
     const cur = sf.value;
@@ -1951,15 +1961,20 @@ function renderExpList() {
       secs.map(s => '<option value="'+s+'"'+(s===cur?' selected':'')+'>'+s+'</option>').join('');
   }
   const secF = sf ? sf.value : '';
+  const filteredD = secF ? d.filter(r => getCompanySector(r.name)===secF) : d;
   let h = '';
   for (const e of EXPERTS) {
-    const fd = secF ? d.filter(r => getCompanySector(r.name)===secF) : d;
-    const a = expAcc(e, fd);
+    const a = expAcc(e, filteredD);
     const str = a ? a.acc.toFixed(1)+'%' : '—';
     const cls = !a ? '' : a.acc>=80 ? 'ahi' : a.acc>=60 ? 'ami' : 'alo';
+    const count = d.filter(r => r.forecasts?.[e] != null).length;
+    const status = count
+      ? '<span class="exp-forecast-status is-added"><span class="exp-status-icon" aria-hidden="true">✓</span>مضاف</span>'
+      : '<span class="exp-forecast-status is-missing">لم يُضف</span>';
     const esc = e.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    h += '<button type="button" class="ei '+(e===S.exp?'on':'')+'" onclick="selExp(\''+esc+'\')">'+
-         '<span class="en">'+e+'</span><span class="ea '+cls+'">'+str+'</span></button>';
+    h += '<button type="button" class="ei exp-entry '+(e===S.exp?'on':'')+'" onclick="selExp(\''+esc+'\')">'+
+         '<span class="exp-entry-head"><span class="en">'+e+'</span>'+status+'</span>'+
+         '<span class="exp-entry-meta"><span>'+count+' شركة</span><span class="ea '+cls+'">دقة '+str+'</span></span></button>';
   }
   document.getElementById('expList').innerHTML = h;
   if (S.exp) selExp(S.exp);
@@ -3414,6 +3429,10 @@ function openModal() {
   const bg = document.getElementById("modalBg");
   lastDialogTrigger = document.activeElement;
   if (bg) {bg.classList.add("on");bg.setAttribute('aria-hidden','false');}
+  for (const [yearId, quarterId] of [['mYr','mQt'],['mPYr','mPQt'],['mAYr','mAQt']]) {
+    document.getElementById(yearId).value = S.yr;
+    document.getElementById(quarterId).value = S.qr;
+  }
   const allNames = [...new Set([
     ...ALL_NAMES,
     ...Object.values(S.extra).flat().map(r => r.name)
