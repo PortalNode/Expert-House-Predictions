@@ -5,7 +5,7 @@ for (const name of ["earnings-core"]) {
   const js = stripTypeScriptTypes(source, { mode: "strip" }).replace(
     /^export /gm,
     "",
-  );
+  ).replace(/[ \t]+$/gm, "");
   fs.writeFileSync(
     "assets/" + name + ".js",
     "/* Generated from src/" +

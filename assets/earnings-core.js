@@ -1,41 +1,41 @@
 /* Generated from src/earnings-core.ts. Run npm run build. */
 (()=>{
 /** Public import seam. Pure parsing and merging; no DOM, network, or storage dependencies. */
-                                                
-                                                  
-                                                                        
-                       
-             
-               
-                   
-                  
-                           
-                                    
-                  
-  
-                         
-                  
-                 
-             
-               
-                   
-                 
-                       
-                          
-                      
-                          
-                 
-              
-                   
-                     
-                    
-                                   
-  
-                     
-                                 
-                                                        
-                                   
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 const digits = (v        ) =>
   String(v)
     .replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)))
@@ -144,10 +144,10 @@ function cells(line        )           {
     .map(clean)
     .filter(Boolean);
 }
-function createEngine(config   
-                       
-                                   
-                    
+function createEngine(config
+
+
+
  ) {
   const byName = new Map                 ();
   for (const c of config.companies) {
@@ -367,10 +367,10 @@ function createEngine(config
         report &&
         (+report[1] !== row.year ||
           (
-            { "70": "q1", "71": "q2", "72": "q3", "1": "q4" }           
-                     
-                    
-             
+            { "70": "q1", "71": "q2", "72": "q3", "1": "q4" }
+
+
+
           )[report[2]] !== row.quarter)
       ) {
         row.errors.push("فترة رابط التقرير تختلف عن الفترة المختارة");
@@ -561,9 +561,9 @@ function createEngine(config
     }
     return { state: next, errors, conflicts, changed, skipped };
   }
-  function previewBackup(payload     )   
-                      
-                     
+  function previewBackup(payload     )
+
+
     {
     const rows              = [],
       issues           = [];
