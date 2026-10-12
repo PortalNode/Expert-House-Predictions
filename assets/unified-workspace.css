@@ -1,0 +1,622 @@
+/* Shared responsive workspace; follows the existing light/dark tokens. */
+[hidden] {
+  display: none !important;
+}
+.u-workspace,
+.u-calendar {
+  background: var(--surface, var(--card));
+  border: 1px solid var(--b1);
+  border-radius: 20px;
+  padding: 28px;
+  margin: 0 0 24px;
+  box-shadow: 0 10px 32px rgba(25, 54, 43, 0.04);
+}
+.u-workspace h2,
+.u-calendar h2 {
+  font-size: 23px;
+  margin: 5px 0 16px;
+  letter-spacing: -0.5px;
+}
+.u-workspace h3 {
+  font-size: 18px;
+  margin: 5px 0;
+}
+.u-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  color: var(--teal);
+  font-weight: 800;
+}
+.u-entry-head,
+.u-calendar-head,
+.u-review-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+.u-muted,
+.u-calendar-head p {
+  color: var(--t2);
+  font-size: 12px;
+}
+.u-mode {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 6px 0 24px;
+}
+.u-mode button {
+  padding: 17px 20px;
+  border: 1px solid var(--b1);
+  border-radius: 12px;
+  background: var(--card2);
+  color: var(--t1);
+  text-align: right;
+  font: 700 14px var(--font-ar);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.u-mode small {
+  display: block;
+  font-weight: 400;
+  color: var(--t2);
+  font-size: 11px;
+  margin-top: 5px;
+}
+.u-mode button.active {
+  border-color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 8%, var(--surface));
+  box-shadow: inset 0 -3px var(--teal);
+}
+.u-config {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr 1.8fr 1.6fr;
+  gap: 14px;
+  margin: 16px 0;
+}
+.u-config label,
+.u-review-settings > label {
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-weight: 600;
+  color: var(--t2);
+}
+.u-workspace input:not([type="checkbox"]):not([type="file"]),
+.u-workspace select,
+.u-calendar-toolbar input,
+.u-calendar-toolbar select {
+  border: 1px solid var(--b2);
+  background: var(--card2);
+  color: var(--t1);
+  font: inherit;
+  padding: 10px 12px;
+  border-radius: 8px;
+  min-width: 0;
+  width: 100%;
+}
+.u-workspace input:focus,
+.u-workspace select:focus,
+.u-workspace textarea:focus,
+.u-calendar input:focus,
+.u-calendar select:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+.u-method {
+  display: flex;
+  gap: 18px;
+  border-bottom: 1px solid var(--b1);
+  margin: 24px 0 16px;
+}
+.u-method button {
+  padding: 10px 0 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--t2);
+  font: 600 12px var(--font-ar);
+  cursor: pointer;
+}
+.u-method button.active {
+  color: var(--teal);
+  border-bottom-color: var(--teal);
+}
+#uText {
+  min-height: 200px;
+  font-size: 14px;
+  line-height: 1.9;
+  resize: vertical;
+}
+.u-text-foot {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--t2);
+  margin: 10px 0;
+}
+.u-text-foot select {
+  max-width: 235px;
+}
+.u-settings {
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--t2);
+}
+.u-settings summary,
+.u-advanced summary,
+.u-methodology summary {
+  cursor: pointer;
+  font-weight: 700;
+  padding: 12px 0;
+}
+.u-settings .u-config {
+  grid-template-columns: 2fr 1fr;
+}
+.u-settings p,
+.u-methodology p {
+  line-height: 1.9;
+  font-size: 12px;
+  color: var(--t2);
+}
+.u-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--b1);
+  margin-top: 18px;
+}
+.u-actions p {
+  margin-left: auto;
+  color: var(--t2);
+  font-size: 12px;
+}
+.u-drop {
+  border: 2px dashed var(--b2);
+  background: var(--card2);
+  border-radius: 12px;
+  padding: 35px 20px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 14px;
+  cursor: pointer;
+}
+.u-drop.drag {
+  border-color: var(--teal);
+}
+.u-drop span {
+  font-size: 12px;
+  color: var(--t2);
+}
+.u-drop input {
+  max-width: 100%;
+}
+.u-review {
+  margin-top: 26px;
+  border-top: 2px solid var(--teal);
+  padding-top: 22px;
+}
+.u-review:focus {
+  outline: 0;
+}
+.u-review-head p {
+  font-size: 12px;
+  color: var(--t2);
+  margin: 8px 0;
+}
+.u-review-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 18px 0;
+  align-items: end;
+}
+.u-review-settings > label {
+  flex: 1;
+  min-width: 190px;
+}
+.u-review-settings .u-check {
+  flex-direction: row;
+  align-items: center;
+  min-width: 140px;
+  padding: 12px;
+}
+.u-workspace input[type="checkbox"] {
+  accent-color: var(--teal);
+  width: 18px;
+  height: 18px;
+}
+.u-table-scroll {
+  overflow: auto;
+  border: 1px solid var(--b1);
+  border-radius: 12px;
+  max-width: 100%;
+}
+.u-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+}
+.u-table th {
+  padding: 12px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--card2);
+  color: var(--t2);
+  white-space: nowrap;
+}
+.u-table td {
+  padding: 14px;
+  border-top: 1px solid var(--b1);
+  font-size: 12px;
+  vertical-align: middle;
+}
+.u-table small {
+  display: block;
+  color: var(--t2);
+  font-size: 10px;
+  margin-top: 5px;
+  line-height: 1.8;
+}
+.u-edit-table {
+  min-width: 1050px;
+}
+.u-edit-table input {
+  min-width: 90px !important;
+  padding: 8px !important;
+}
+.u-edit-table [data-field="company"] {
+  min-width: 140px !important;
+}
+.u-edit-table [data-field="year"] {
+  width: 80px !important;
+}
+.u-edit-table select {
+  padding: 8px !important;
+  font-size: 11px;
+  margin-top: 5px;
+}
+.u-edit-table .u-row-notes {
+  min-width: 150px;
+  max-width: 240px;
+}
+.u-status {
+  display: inline-block;
+  padding: 5px 9px;
+  background: var(--card2);
+  color: var(--t2);
+  border: 1px solid var(--b1);
+  border-radius: 6px;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 600;
+}
+.u-status.done {
+  color: var(--teal);
+  border-color: color-mix(in srgb, var(--teal) 30%, transparent);
+  background: color-mix(in srgb, var(--teal) 8%, transparent);
+}
+.u-status.warn,
+.u-warning {
+  color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 7%, transparent);
+  border-color: color-mix(in srgb, var(--gold) 25%, transparent);
+}
+.u-error,
+.u-warning {
+  padding: 14px 18px;
+  border-radius: 10px;
+  margin-top: 16px;
+  font-size: 12px;
+  line-height: 1.9;
+}
+.u-error {
+  color: var(--red);
+  border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
+  background: color-mix(in srgb, var(--red) 6%, transparent);
+}
+.u-save-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 18px;
+  font-size: 12px;
+  color: var(--t2);
+}
+.u-success {
+  display: flex;
+  gap: 18px;
+  align-items: start;
+  padding: 20px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--teal) 6%, transparent);
+}
+.u-success > span {
+  font-size: 30px;
+  color: var(--teal);
+}
+.u-success p {
+  font-size: 12px;
+  color: var(--t2);
+  line-height: 1.9;
+}
+.u-advanced {
+  margin: 20px 0;
+  color: var(--t2);
+  font-size: 12px;
+}
+.u-advanced > .entry-layout {
+  margin-top: 15px;
+}
+.u-calendar-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin: 20px 0;
+}
+.u-calendar-stats > div {
+  border: 1px solid var(--b1);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+.u-calendar-stats span {
+  font-size: 11px;
+  color: var(--t2);
+}
+.u-calendar-stats strong {
+  display: block;
+  font-size: 28px;
+  margin-top: 8px;
+  color: var(--t1);
+}
+.u-calendar-toolbar {
+  display: grid;
+  grid-template-columns: 1.8fr 1fr 1.1fr 1fr;
+  gap: 10px;
+  margin: 22px 0 16px;
+  font-size: 12px;
+}
+.u-calendar-table {
+  min-width: 940px;
+}
+.u-calendar-table strong {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.u-company-link {
+  font: 700 13px var(--font-ar);
+  color: var(--t1);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+  text-align: right;
+}
+.u-company-link:hover {
+  color: var(--teal);
+}
+.u-table .u-number {
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  font-weight: 700;
+}
+.u-calendar-note {
+  font-size: 11px;
+  color: var(--t2);
+  margin-top: 14px;
+  line-height: 1.8;
+}
+.u-methodology {
+  border-top: 1px solid var(--b1);
+  margin-top: 20px;
+}
+.u-empty {
+  text-align: center;
+  padding: 32px !important;
+  color: var(--t2);
+}
+.u-fiscal {
+  color: var(--gold) !important;
+}
+@media (max-width: 800px) {
+  .u-workspace,
+  .u-calendar {
+    padding: 20px;
+    border-radius: 14px;
+  }
+  .u-config {
+    grid-template-columns: 1fr 1fr;
+  }
+  .u-mode button {
+    padding: 14px 10px;
+    font-size: 12px;
+  }
+  .u-mode small {
+    font-size: 10px;
+  }
+  .u-calendar-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+  .u-calendar-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .u-actions {
+    flex-wrap: wrap;
+  }
+  .u-actions p {
+    width: 100%;
+    margin: 0 0 8px;
+  }
+  .u-settings .u-config {
+    grid-template-columns: 1fr;
+  }
+  .u-calendar-head {
+    align-items: start;
+  }
+  .u-calendar-head .btn {
+    font-size: 10px;
+  }
+  .u-calendar-stats > div {
+    padding: 12px;
+  }
+  .u-calendar-stats span {
+    font-size: 10px;
+  }
+  .u-text-foot {
+    align-items: start;
+    flex-direction: column;
+  }
+  .u-calendar-head h2,
+  .u-workspace h2 {
+    font-size: 19px;
+  }
+  .u-entry-head {
+    align-items: start;
+  }
+  .u-save-bar {
+    gap: 15px;
+  }
+}
+@media (max-width: 450px) {
+  .u-workspace,
+  .u-calendar {
+    padding: 14px;
+  }
+  .u-mode {
+    gap: 6px;
+  }
+  .u-mode small {
+    display: none;
+  }
+  .u-config {
+    gap: 10px;
+  }
+  .u-mode button {
+    text-align: center;
+    padding: 12px 6px;
+  }
+  .u-method {
+    gap: 16px;
+  }
+  .u-method button {
+    font-size: 11px;
+  }
+  .u-entry-head .btn {
+    font-size: 10px;
+    padding: 7px;
+  }
+  .u-review-head {
+    align-items: start;
+  }
+  .u-drop {
+    padding: 20px 12px;
+  }
+  .u-calendar-head {
+    flex-direction: column;
+  }
+  .u-calendar-toolbar {
+    gap: 8px;
+  }
+  .u-actions > .btn {
+    flex: 1;
+  }
+}
+.u-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin: 16px 0;
+  font-size: 12px;
+  color: var(--t2);
+}
+.u-pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ann-side .announcement-list {
+  max-height: 650px;
+  overflow: auto;
+}
+@media (max-width: 640px) {
+  .u-calendar-table,
+  .u-edit-table {
+    min-width: 0;
+    display: block;
+  }
+  .u-calendar-table thead,
+  .u-edit-table thead {
+    display: none;
+  }
+  .u-calendar-table tbody,
+  .u-edit-table tbody {
+    display: block;
+  }
+  .u-calendar-table tr,
+  .u-edit-table tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    padding: 10px;
+    border-bottom: 1px solid var(--b2);
+    gap: 10px;
+  }
+  .u-calendar-table td,
+  .u-edit-table td {
+    display: block;
+    padding: 5px;
+    border: 0;
+    min-width: 0;
+  }
+  .u-calendar-table td:before,
+  .u-edit-table td:before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    color: var(--t2);
+    margin-bottom: 5px;
+    font-weight: 400;
+  }
+  .u-calendar-table td:first-child {
+    grid-column: 1/-1;
+  }
+  .u-calendar-table td:nth-child(2) {
+    grid-column: 1/-1;
+  }
+  .u-calendar-table td:last-child .btn {
+    width: 100%;
+  }
+  .u-edit-table td:nth-child(2) {
+    grid-column: 2;
+  }
+  .u-edit-table input,
+  .u-edit-table [data-field="company"] {
+    min-width: 0 !important;
+  }
+  .u-edit-table .u-row-notes {
+    min-width: 0;
+  }
+  .u-calendar-table .u-number {
+    font-size: 16px;
+  }
+  .u-calendar-table .u-company-link {
+    font-size: 16px;
+  }
+  .u-calendar-table tr:nth-child(even),
+  .u-edit-table tr:nth-child(even) {
+    background: var(--card2);
+  }
+  .u-table-scroll:has(.u-edit-table),
+  .u-table-scroll:has(.u-calendar-table) {
+    border-radius: 10px;
+    overflow: hidden;
+  }
+}

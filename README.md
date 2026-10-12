@@ -35,3 +35,11 @@ node --test tests/input-validation.test.cjs
 تم التحقق في المتصفح من الإدخال والمراجعة والحفظ والإضافة اليدوية وتحديث مؤشر بيت الخبرة بعد الحفظ وتغيير الفترة، ومن التنقل بين الأقسام الثمانية وعدم تجاوز عرض الجوال، والرجوع والتقدم والمظهر الداكن.
 
 المشروع الأصلي صفحة ثابتة بلغة جافاسكربت، دون عملية بناء أو تثبيت حزم جديدة. لم يُختبر التحليل المتقدم بمفتاح خارجي.
+
+## Unified earnings and announcement workspace
+
+The static app now includes the attached 233-company announcement history, a shared import/review workflow, manual entry, CSV/TSV/text/HTML input, legacy JSON backup migration, explicit currency conversion, conflict handling, undo, and a responsive calendar linked to financial results.
+
+Open `index.html`, or serve the repository with any static server. No server-side database is required. Data remains in the current browser origin; use **إدارة البيانات** to export it before moving between a local preview and GitHub Pages.
+
+See [integration notes](docs/integration.md) for migration and [validation](docs/validation.md) for tested behavior. Build with `npm run build`, verify with `npm test`, and typecheck with `npm run typecheck` when TypeScript is installed.
