@@ -21,6 +21,72 @@ test('archived financial announcements complete missing historical quarters with
   assert.ok(nama.sourceUrl.startsWith('https://'));
 });
 
+test('newly published third-quarter results appear under their announced dates', () => {
+  const imported = load('../assets/announcement-updates.js', 'ANNOUNCEMENT_UPDATES');
+  const expected = new Map([
+    ['2330', '2026-10-11'],
+    ['4003', '2026-10-08'],
+    ['4083', '2026-10-08'],
+    ['4190', '2026-10-13'],
+  ]);
+  for (const [symbol, date] of expected) {
+    const result = imported.records.find(r => r.symbol === symbol && r.year === 2026 && r.quarter === 'Q3');
+    assert.equal(result?.date, date, `2026 Q3 announcement for ${symbol}`);
+    assert.ok(result?.sourceUrl.startsWith('https://'));
+  }
+});
+
+test('the fiscal-year grouping follows each issuer and records transitions', () => {
+  const calendars = load('../assets/fiscal-calendars.js', 'FISCAL_CALENDARS');
+  assert.equal(calendars['1304'].yearEnd, '09-30');
+  assert.equal(calendars['1321'].yearEnd, '03-31');
+  assert.equal(calendars['4291'].yearEnd, '07-31');
+  assert.equal(calendars['4291'].previousYearEnd, '08-31');
+  assert.equal(calendars['4240'].yearEnd, '12-31');
+  assert.equal(calendars['4240'].previousYearEnd, '03-31');
+  assert.equal(calendars['4321'].previousYearEnd, '03-31');
+  assert.equal(calendars['2270'].previousYearEnd, '03-31');
+  assert.equal(calendars['4147'].yearEnd, '03-31');
+  assert.equal(calendars['4330'].cadence, 'fund');
+  assert.ok(Object.keys(calendars).length >= 269);
+});
+
+test('the first estimated result is the displayed announcement date when a later detailed filing exists', () => {
+  const imported = load('../assets/announcement-updates.js', 'ANNOUNCEMENT_UPDATES');
+  const first = imported.earlierEstimatedAnnouncements.find(r => r.symbol === '2330' && r.year === 2026 && r.quarter === 'Q2');
+  assert.equal(first.date, '2026-07-12');
+  assert.equal(first.previousDate, '2026-07-21');
+  assert.ok(first.sourceUrl.startsWith('https://'));
+  assert.ok(first.finalSourceUrl.startsWith('https://'));
+  for (const row of imported.earlierEstimatedAnnouncements) {
+    assert.ok(row.date < row.previousDate, `estimated result must precede detailed filing: ${row.symbol} ${row.year} ${row.quarter}`);
+    assert.equal(row.periodEnd.slice(0, 4) <= String(row.year), true);
+  }
+});
+
+test('first preliminary twelve-month results take priority over later annual filings', () => {
+  const imported = load('../assets/announcement-updates.js', 'ANNOUNCEMENT_UPDATES');
+  const group = imported.earlierEstimatedAnnouncements.find(r => r.symbol === '2250' && r.year === 2025 && r.quarter === 'Q4');
+  const othaim = imported.earlierEstimatedAnnouncements.find(r => r.symbol === '4001' && r.year === 2024 && r.quarter === 'Q4');
+  assert.deepEqual([group?.date, group?.previousDate], ['2026-02-05', '2026-03-11']);
+  assert.deepEqual([othaim?.date, othaim?.previousDate], ['2025-02-11', '2025-03-25']);
+  assert.ok(group.sourceUrl.includes('mubasher.info'));
+});
+
+test('unresolved historical fiscal labels are flagged instead of presented as confirmed', () => {
+  const issues = load('../assets/announcement-issues.js', 'ANNOUNCEMENT_ISSUES');
+  const cenomi = issues.find(r => r.symbol === '4240' && r.year === 2021 && r.quarter === 'Q3');
+  assert.equal(cenomi.date, '2022-02-07');
+  assert.equal(cenomi.periodEnd, '2021-12-31');
+  assert.ok(cenomi.sourceUrl.startsWith('https://'));
+  assert.ok(!issues.some(r => r.symbol === '4240' && r.year === 2022 && r.quarter === 'Q1'));
+  assert.ok(!issues.some(r => r.symbol === '7030' && r.year === 2023 && r.quarter === 'Q2'));
+  assert.ok(!issues.some(r => r.symbol === '4180' && r.year === 2023 && r.quarter === 'Q2'));
+  assert.ok(!issues.some(r => r.symbol === '4100' && r.year === 2022 && r.quarter === 'Q1'));
+  assert.ok(issues.some(r => r.symbol === '2270' && r.year === 2023 && r.quarter === 'Q3'));
+  assert.ok(issues.length > 100);
+});
+
 test('new dates appear in the calendar while a visitor date retains precedence', () => {
   const imported = load('../assets/announcement-updates.js', 'ANNOUNCEMENT_UPDATES');
   const grouped = [...new Set(imported.records.map(r => r.symbol))].map(symbol => ({

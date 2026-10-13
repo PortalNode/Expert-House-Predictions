@@ -25,6 +25,15 @@ const assert = require("node:assert/strict");
     await page.evaluate(() => S.announcements["الرياض"]["2025_q3"]),
     "2025-10-20",
   );
+  assert.deepEqual(await page.evaluate(() => [
+    S.announcements["المتقدمة"]["2026_q2"],
+    S.announcements["المتقدمة"]["2026_q3"],
+    S.announcements["إكسترا"]["2025_q3"],
+  ]), ["2026-07-12", "2026-10-11", "2025-10-07"]);
+  assert.equal(
+    await page.evaluate(() => predictionForCompany("سينومي ريتيل", 2021, "q3").confirmed),
+    false,
+  );
   console.log(
     "source gaps",
     await page.evaluate(() =>
@@ -92,6 +101,21 @@ const assert = require("node:assert/strict");
   await page.click("#uCommit");
   assert.equal(await page.locator(".u-success").count(), 1);
   await page.click("#uViewCalendar");
+  await page.selectOption("#uFiscalEnd", "03-31");
+  assert.equal(await page.locator("#uCalendarBody tr").count(), 5);
+  assert.ok((await page.locator("#uCalendarBody").innerText()).includes("أنابيب الشرق"));
+  await page.selectOption("#uFiscalEnd", "fund");
+  assert.ok((await page.locator("#uCalendarBody").innerText()).includes("ريت"));
+  await page.selectOption("#uFiscalEnd", "");
+  await page.selectOption("#annYear", "2021");
+  await page.selectOption("#annQuarter", "q3");
+  await page.selectOption("#uStatus", "audit");
+  await page.fill("#uCalendarSearch", "سينومي ريتيل");
+  assert.ok((await page.locator("#uCalendarBody").innerText()).includes("يحتاج تدقيق"));
+  await page.fill("#uCalendarSearch", "");
+  await page.selectOption("#uStatus", "all");
+  await page.selectOption("#annYear", "2026");
+  await page.selectOption("#annQuarter", "q3");
   await page.evaluate(() => scrollTo(0, 0));
   await page.screenshot({
     path: "work/browser-check/desktop-calendar.png",
@@ -231,6 +255,50 @@ const assert = require("node:assert/strict");
     ["2021-04-30", "2025-10-19", "2021-05-02"],
   );
   await migrated.close();
+  const previousRelease = await browser.newPage();
+  await previousRelease.addInitScript(() => {
+    localStorage.setItem("finUnifiedV1", JSON.stringify({
+      version: 5,
+      seedVersion: 2,
+      forecasts: {},
+      announcements: {
+        "المتقدمة": { "2026_q2": "2026-07-21" },
+        "إكسترا": { "2026_q3": "2026-10-09" },
+      },
+      provenance: {},
+    }));
+  });
+  await previousRelease.goto("file://" + path.resolve("index.html"));
+  await previousRelease.waitForSelector("#unifiedWorkspace");
+  assert.deepEqual(
+    await previousRelease.evaluate(() => [
+      S.announcements["المتقدمة"]["2026_q3"],
+      S.announcements["المتقدمة"]["2026_q2"],
+      S.announcements["إكسترا"]["2026_q3"],
+      S.announcements["تسهيل"]["2026_q3"],
+      JSON.parse(localStorage.getItem("finUnifiedV1")).seedVersion,
+    ]),
+    ["2026-10-11", "2026-07-12", "2026-10-09", "2026-10-08", 4],
+  );
+  await previousRelease.close();
+  const previousPreliminary = await browser.newPage();
+  await previousPreliminary.addInitScript(() => {
+    localStorage.setItem("finUnifiedV1", JSON.stringify({
+      version: 5, seedVersion: 3, forecasts: {},
+      announcements: {
+        "المجموعة السعودية": { "2025_q4": "2026-03-11" },
+        "أسواق ع العثيم": { "2024_q4": "2025-03-26" },
+      }, provenance: {},
+    }));
+  });
+  await previousPreliminary.goto("file://" + path.resolve("index.html"));
+  await previousPreliminary.waitForSelector("#unifiedWorkspace");
+  assert.deepEqual(await previousPreliminary.evaluate(() => [
+    S.announcements["المجموعة السعودية"]["2025_q4"],
+    S.announcements["أسواق ع العثيم"]["2024_q4"],
+    JSON.parse(localStorage.getItem("finUnifiedV1")).seedVersion,
+  ]), ["2026-02-05", "2025-03-26", 4]);
+  await previousPreliminary.close();
   await browser.close();
 })().catch((e) => {
   console.error(e);

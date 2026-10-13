@@ -12,8 +12,13 @@
     "\u2069";
   const SEED = globalThis.ANNOUNCEMENT_HISTORY;
   const UPDATES = globalThis.ANNOUNCEMENT_UPDATES || {
-    records: [], verifiedBankCorrections: [], asOf: "",
+    records: [], verifiedBankCorrections: [], earlierEstimatedAnnouncements: [], asOf: "",
   };
+  const FISCAL = globalThis.FISCAL_CALENDARS || {};
+  const ISSUE_ROWS = globalThis.ANNOUNCEMENT_ISSUES || [];
+  const ISSUES = new Map(
+    ISSUE_ROWS.map((r) => [[r.symbol, r.year, r.quarter, r.date].join("|"), r]),
+  );
   const KEY = "finUnifiedV1";
   const UNDO = "finUnifiedUndoV1";
   const aliases = { ...CO_ALIASES };
@@ -130,7 +135,7 @@
       installState(saved);
       seedVersion = saved.seedVersion || 0;
     }
-    if (seedVersion < 2) {
+    if (seedVersion < 4) {
       if (seedVersion < 1)
         S.announcements = EarningsCore.seedHistory(
           SEED.forecasts,
@@ -166,7 +171,17 @@
         S.announcements,
         (n) => engine.resolve(n),
       );
-      seedVersion = 2;
+      for (const record of UPDATES.earlierEstimatedAnnouncements || []) {
+        const name = engine.resolve(record.symbol)?.name;
+        const key = record.year + "_" + record.quarter.toLowerCase();
+        if (
+          name &&
+          S.announcements[name]?.[key] === record.previousDate &&
+          !provenance[record.symbol + "|" + key + "|date"]
+        )
+          S.announcements[name][key] = record.date;
+      }
+      seedVersion = 4;
       persist(current());
     }
   } catch (error) {
@@ -192,11 +207,25 @@
     }
   };
   predictionForCompany = function (name, year, qr) {
-    return EarningsCore.projectDate(
-      S.announcements[canonicalCompany(name)] || {},
-      Number(year),
-      qr,
+    const company = engine.resolve(name);
+    const history = S.announcements[canonicalCompany(name)] || {};
+    const clean = Object.fromEntries(
+      Object.entries(history).filter(([key, date]) => {
+        const [y, q] = key.split("_");
+        return !ISSUES.has([company?.symbol, Number(y), q.toUpperCase(), date].join("|"));
+      }),
     );
+    const key = year + "_" + String(qr).toLowerCase();
+    const issue = ISSUES.get(
+      [company?.symbol, Number(year), String(qr).toUpperCase(), history[key]].join("|"),
+    );
+    if (issue)
+      return {
+        date: issue.date, confirmed: false, issue,
+        rangeStart: issue.date, rangeEnd: issue.date,
+        count: 0, confidence: "low",
+      };
+    return EarningsCore.projectDate(clean, Number(year), qr);
   };
 
   const inputHero = document.querySelector("#t0 .input-hero");
@@ -730,7 +759,7 @@
     .map((s) => `<option>${h(s)}</option>`)
     .join(
       "",
-    )}</select><select id="uStatus" aria-label="حالة الإعلان"><option value="all">جميع الحالات</option><option value="announced">أعلنت</option><option value="pending">لم تعلن</option><option value="soon">متوقعة خلال أسبوع</option><option value="overdue">تجاوزت النطاق المتوقع</option><option value="unknown">سجل غير كافٍ</option></select><select id="uCalendarSort" aria-label="ترتيب المواعيد"><option value="date">الأقرب موعدًا</option><option value="name">اسم الشركة</option><option value="coverage">الأكثر تغطية</option></select></div><div class="u-table-scroll"><table class="u-table u-calendar-table"><thead><tr><th>الشركة</th><th>موعد الإعلان</th><th>الحالة</th><th>متوسط التوقعات</th><th>الربح الفعلي</th><th>التغطية</th><th>السجل</th></tr></thead><tbody id="uCalendarBody"></tbody></table></div><div class="u-pagination"><button class="btn bo" id="uPagePrev">السابق</button><span id="uPageInfo"></span><button class="btn bo" id="uPageNext">التالي</button></div><p class="u-calendar-note" id="uCalendarNote"></p><details class="u-methodology"><summary>كيف تُحسب المواعيد؟</summary><p>الموعد المتوقع هو وسيط تواريخ نفس الربع المالي من آخر ثلاث سنوات متاحة، بعد نقلها إلى السنة المختارة. النطاق يعكس تشتت السجل؛ لا يمثل موعدًا مؤكدًا أو مهلة نظامية. درجة الثقة وصفية بحسب عدد السنوات وليست احتمالًا إحصائيًا.</p><p id="uSourceNote"></p></details>`;
+    )}</select><select id="uFiscalEnd" aria-label="نهاية السنة المالية"><option value="">كل السنوات المالية</option><option value="12-31">تنتهي في ٣١ ديسمبر</option><option value="03-31">تنتهي في ٣١ مارس</option><option value="07-31">تنتهي في ٣١ يوليو</option><option value="08-31">تنتهي في ٣١ أغسطس</option><option value="09-30">تنتهي في ٣٠ سبتمبر</option><option value="06-30">تنتهي في ٣٠ يونيو</option><option value="fund">صناديق عقارية</option></select><select id="uStatus" aria-label="حالة الإعلان"><option value="all">جميع الحالات</option><option value="announced">أعلنت</option><option value="audit">بحاجة إلى تدقيق</option><option value="pending">لم تعلن</option><option value="soon">متوقعة خلال أسبوع</option><option value="overdue">تجاوزت النطاق المتوقع</option><option value="unknown">سجل غير كافٍ</option></select><select id="uCalendarSort" aria-label="ترتيب المواعيد"><option value="date">الأقرب موعدًا</option><option value="name">اسم الشركة</option><option value="coverage">الأكثر تغطية</option></select></div><div class="u-table-scroll"><table class="u-table u-calendar-table"><thead><tr><th>الشركة</th><th>موعد الإعلان</th><th>الحالة</th><th>متوسط التوقعات</th><th>الربح الفعلي</th><th>التغطية</th><th>السجل</th></tr></thead><tbody id="uCalendarBody"></tbody></table></div><div class="u-pagination"><button class="btn bo" id="uPagePrev">السابق</button><span id="uPageInfo"></span><button class="btn bo" id="uPageNext">التالي</button></div><p class="u-calendar-note" id="uCalendarNote"></p><details class="u-methodology"><summary>كيف تُحسب المواعيد؟</summary><p>الموعد المتوقع هو وسيط تواريخ نفس الربع المالي من آخر ثلاث سنوات متاحة، بعد نقلها إلى السنة المختارة. النطاق يعكس تشتت السجل؛ لا يمثل موعدًا مؤكدًا أو مهلة نظامية. درجة الثقة وصفية بحسب عدد السنوات وليست احتمالًا إحصائيًا.</p><p id="uSourceNote"></p></details>`;
   document.querySelector("#t6 .dash-hero").after(calendar);
   document.querySelector("#t6 .hero-copy").textContent =
     "سجل تاريخي موحّد، مواعيد مرجحة، وتوقعات الأرباح والنتائج في مكان واحد.";
@@ -747,19 +776,32 @@
       UPDATES.asOf +
       "، وطُوبق " +
       (UPDATES.verifiedBankCorrections || []).length +
-      " تاريخًا من القيم البنكية المدمجة مع إعلانات منشورة. تواريخ الملف الأصلي لم تُتحقق كل واحدة منها خارجيًا.",
+      " تاريخًا من القيم البنكية المدمجة مع إعلانات منشورة. اعتُمد أول إعلان نتائج تقديري أو أولي بدل تاريخ لاحق في " +
+      (UPDATES.earlierEstimatedAnnouncements || []).length +
+      " ربعًا. هناك " + ISSUE_ROWS.length +
+      " تاريخًا من الملف الأصلي يحتاج تحققًا إضافيًا أو مراجعة تسمية السنة والربع؛ لا يُعامل كإعلان مؤكد حتى تُحسم مطابقته.",
   );
-  const fiscal = {
-    1304: "30/09",
-    4291: "31/07",
-    4292: "31/07",
-    7211: "30/06",
-    1321: "31/03",
-    4070: "31/03",
-    4147: "31/03",
-    4191: "31/03",
-    7040: "31/03",
+  const fiscalEndFor = (symbol, year) => {
+    const calendar = FISCAL[symbol];
+    if (!calendar) return "";
+    if (calendar.cadence === "fund") return "fund";
+    return calendar.previousYearEnd && year < calendar.changeYear
+      ? calendar.previousYearEnd
+      : calendar.yearEnd;
   };
+  const fiscalLabel = (symbol, year) => {
+    const end = fiscalEndFor(symbol, year);
+    if (end === "fund") return "صندوق عقاري • إفصاح غير ربعي";
+    if (end === "هجري") return "سنة مالية هجرية";
+    const calendar = FISCAL[symbol];
+    const transition = calendar?.changeYear === year ? " • سنة انتقالية" : "";
+    return end ? "نهاية السنة المالية " + end.slice(3) + "/" + end.slice(0, 2) + transition : "سنة مالية غير محددة";
+  };
+  const estimatedDates = new Set(
+    [...UPDATES.records, ...(UPDATES.earlierEstimatedAnnouncements || [])]
+      .filter((r) => /estimated|التقديرية/i.test(r.noticeTitle + " " + r.sourceLabel))
+      .map((r) => [r.symbol, r.year, r.quarter, r.date].join("|")),
+  );
   function today() {
     const p = Object.fromEntries(
       new Intl.DateTimeFormat("en-CA", {
@@ -812,12 +854,15 @@
       const count = Object.values(f?.forecasts || {}).filter(
         (v) => v != null,
       ).length;
-      return { c, name, p, f, count };
+      const isEstimated = p?.confirmed && estimatedDates.has(
+        [c.symbol, year, quarter.toUpperCase(), p.date].join("|"),
+      );
+      return { c, name, p, f, count, isEstimated };
     });
     const all = rows.filter((x) => x.p || x.f),
       announced = rows.filter((x) => x.p?.confirmed),
       soon = rows.filter(
-        (x) => !x.p?.confirmed && x.p?.date >= day && x.p.date <= weekEnd,
+        (x) => !x.p?.confirmed && !x.p?.issue && x.p?.date >= day && x.p.date <= weekEnd,
       );
     $("uCalendarPeriod").textContent = rtl(
       QL[quarter] + " " + year + " • القيم المالية بمليون ريال",
@@ -828,7 +873,7 @@
       ["متوقعة خلال أسبوع", soon.length],
       [
         "توقعات لم تتحقق بعد",
-        rows.filter((x) => x.p && !x.p.confirmed && x.p.rangeEnd < day).length,
+        rows.filter((x) => x.p && !x.p.confirmed && !x.p.issue && x.p.rangeEnd < day).length,
       ],
     ]
       .map(
@@ -837,6 +882,7 @@
       .join("");
     const query = normalizeArabicLookup($("uCalendarSearch").value),
       sector = $("uSector").value,
+      fiscalEnd = $("uFiscalEnd").value,
       status = $("uStatus").value;
     rows = rows.filter(
       (x) =>
@@ -844,14 +890,16 @@
           normalizeArabicLookup(x.name).includes(query) ||
           x.c.symbol.includes(query)) &&
         (!sector || x.c.sector === sector) &&
+        (!fiscalEnd || fiscalEndFor(x.c.symbol, year) === fiscalEnd) &&
         (status === "all" ||
           (status === "announced" && x.p?.confirmed) ||
-          (status === "pending" && !x.p?.confirmed) ||
+          (status === "audit" && x.p?.issue) ||
+          (status === "pending" && !x.p?.confirmed && !x.p?.issue) ||
           (status === "unknown" && !x.p) ||
           (status === "soon" && soon.includes(x)) ||
           (status === "overdue" &&
             x.p &&
-            !x.p.confirmed &&
+            !x.p.confirmed && !x.p.issue &&
             x.p.rangeEnd < day)),
     );
     const sort = $("uCalendarSort").value;
@@ -878,14 +926,16 @@
     $("uCalendarBody").innerHTML =
       visible
         .map((x) => {
-          const label = x.p?.confirmed
-            ? "أعلنت"
+          const label = x.p?.issue
+            ? "يحتاج تدقيق"
+            : x.p?.confirmed
+            ? x.isEstimated ? "أعلنت تقديريًا" : "أعلنت"
             : !x.p
               ? "سجل غير كافٍ"
               : x.p.rangeEnd < day
                 ? "تجاوزت النطاق المتوقع"
                 : "موعد متوقع";
-          return `<tr><td><button class="u-company-link" data-open="${h(x.name)}">${h(x.name)}</button><small>${h(rtl(x.c.symbol + " • " + (x.c.sector || "")))}</small>${fiscal[x.c.symbol] ? `<small class="u-fiscal">${h(rtl("نهاية السنة المالية " + fiscal[x.c.symbol]))}</small>` : ""}</td><td><strong>${h(x.p ? rtl(formatFullDate(x.p.date)) : "—")}</strong><small>${x.p && !x.p.confirmed ? h(rtl(formatShortDate(x.p.rangeStart) + " — " + formatShortDate(x.p.rangeEnd))) : x.p ? "تاريخ إعلان مسجل" : "أضف سجلًا لنفس الربع"}</small></td><td><span class="u-status ${x.p?.confirmed ? "done" : x.p?.rangeEnd < day ? "warn" : ""}">${label}</span>${x.p && !x.p.confirmed ? `<small>${h(rtl(x.p.count + " سنوات • " + { high: "ثقة مرتفعة", medium: "ثقة متوسطة", low: "ثقة أولية" }[x.p.confidence]))}</small>` : ""}</td><td class="u-number">${h(rtl(x.f?.avg == null ? "—" : fmt(x.f.avg)))}</td><td class="u-number">${h(rtl(x.f?.actual == null ? "—" : fmt(x.f.actual)))}</td><td>${h(rtl(x.count ? x.count + " بيوت خبرة" : "لا توجد توقعات"))}</td><td><button class="btn bo" data-open="${h(x.name)}">التفاصيل</button></td></tr>`;
+          return `<tr><td><button class="u-company-link" data-open="${h(x.name)}">${h(x.name)}</button><small>${h(rtl(x.c.symbol + " • " + (x.c.sector || "")))}</small><small class="u-fiscal">${h(rtl(fiscalLabel(x.c.symbol, year)))}</small></td><td><strong>${h(x.p ? rtl(formatFullDate(x.p.date)) : "—")}</strong><small>${x.p?.issue ? "تاريخ سابق يحتاج مطابقة المصدر" : x.p && !x.p.confirmed ? h(rtl(formatShortDate(x.p.rangeStart) + " — " + formatShortDate(x.p.rangeEnd))) : x.p ? "تاريخ إعلان مسجل" : "أضف سجلًا لنفس الربع"}</small></td><td><span class="u-status ${x.p?.confirmed ? "done" : x.p?.issue || x.p?.rangeEnd < day ? "warn" : ""}">${label}</span>${x.p?.issue ? `<small>${h(x.p.issue.status)}</small>` : x.p && !x.p.confirmed ? `<small>${h(rtl(x.p.count + " سنوات • " + { high: "ثقة مرتفعة", medium: "ثقة متوسطة", low: "ثقة أولية" }[x.p.confidence]))}</small>` : ""}</td><td class="u-number">${h(rtl(x.f?.avg == null ? "—" : fmt(x.f.avg)))}</td><td class="u-number">${h(rtl(x.f?.actual == null ? "—" : fmt(x.f.actual)))}</td><td>${h(rtl(x.count ? x.count + " بيوت خبرة" : "لا توجد توقعات"))}</td><td><button class="btn bo" data-open="${h(x.name)}">التفاصيل</button></td></tr>`;
         })
         .join("") ||
       '<tr><td colspan="7" class="u-empty">لا توجد شركات تطابق هذه التصفية.</td></tr>';
@@ -908,7 +958,7 @@
     const button = e.target.closest("[data-open]");
     if (button) openAnnouncementForCompany(button.dataset.open);
   };
-  ["uCalendarSearch", "uSector", "uStatus", "uCalendarSort"].forEach((id) =>
+  ["uCalendarSearch", "uSector", "uFiscalEnd", "uStatus", "uCalendarSort"].forEach((id) =>
     $(id).addEventListener("input", () => {
       calendarPage = 0;
       renderCalendar();
@@ -940,6 +990,7 @@
     const imported = [
       ...UPDATES.records,
       ...(UPDATES.verifiedBankCorrections || []),
+      ...(UPDATES.earlierEstimatedAnnouncements || []),
     ].filter((r) => r.symbol === company.symbol);
     const details = document.createElement("details");
     details.id = "uFullHistory";
@@ -961,7 +1012,12 @@
             r.date === date,
         );
         const meta = provenance[company.symbol + "|" + key + "|date"];
-        const sourceCell = meta?.source
+        const issue = ISSUES.get(
+          [company.symbol, Number(y), q.toUpperCase(), date].join("|"),
+        );
+        const sourceCell = issue
+          ? `<span class="u-status warn">يحتاج تدقيق</span><small>${h(issue.status)}</small>${issue.sourceUrl ? `<a href="${h(issue.sourceUrl)}" target="_blank" rel="noopener noreferrer">الإفصاح الذي يحتاج مطابقة</a>` : ""}`
+          : meta?.source
           ? h(meta.source)
           : update?.sourceUrl?.startsWith("https://")
             ? `<a href="${h(update.sourceUrl)}" target="_blank" rel="noopener noreferrer">${h(update.sourceLabel || "إعلان النتائج")}</a>`
