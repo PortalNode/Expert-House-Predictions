@@ -1,0 +1,10 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const out=path.resolve(process.argv[2]||'../../outputs/rasd-unified');
+fs.mkdirSync(out,{recursive:true});
+for(const name of ['index.html','README.md','package.json','package-lock.json','tsconfig.json','assets','src','scripts','tests','docs']) fs.cpSync(name,path.join(out,name),{recursive:true});
+let html=fs.readFileSync('index.html','utf8');
+html=html.replace(/<script src="(assets\/[^\"]+)"\s*><\/script>/g,(_,file)=>'<script>\n'+fs.readFileSync(file,'utf8').replace(/<\/script/gi,'<\\/script')+'\n</script>');
+html=html.replace(/<link rel="stylesheet" href="(assets\/[^\"]+)">/g,(_,file)=>'<style>\n'+fs.readFileSync(file,'utf8')+'\n</style>');
+fs.writeFileSync(path.join(path.dirname(out),'rasd-unified.html'),html);
+console.log('Packaged '+out);

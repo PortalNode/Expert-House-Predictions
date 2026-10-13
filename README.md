@@ -35,3 +35,17 @@ node --test tests/input-validation.test.cjs
 تم التحقق في المتصفح من الإدخال والمراجعة والحفظ والإضافة اليدوية وتحديث مؤشر بيت الخبرة بعد الحفظ وتغيير الفترة، ومن التنقل بين الأقسام الثمانية وعدم تجاوز عرض الجوال، والرجوع والتقدم والمظهر الداكن.
 
 المشروع الأصلي صفحة ثابتة بلغة جافاسكربت، دون عملية بناء أو تثبيت حزم جديدة. لم يُختبر التحليل المتقدم بمفتاح خارجي.
+
+## Unified earnings and announcement workspace
+
+The static app now includes the attached 233-company announcement history, a shared import/review workflow, manual entry, CSV/TSV/text/HTML input, legacy JSON backup migration, explicit currency conversion, conflict handling, undo, and a responsive calendar linked to financial results.
+
+Open `index.html`, or serve the repository with any static server. No server-side database is required. Data remains in the current browser origin; use **إدارة البيانات** to export it before moving between a local preview and GitHub Pages.
+
+See [integration notes](docs/integration.md) for migration and [validation](docs/validation.md) for tested behavior. Build with `npm run build`, verify with `npm test`, and typecheck with `npm run typecheck` when TypeScript is installed.
+
+## Historical announcement coverage through 13 October 2026
+
+`assets/announcement-updates.js` adds 1,075 source-linked financial-result announcement dates for fiscal 2021 onward. It also resolves 50 conflicting built-in bank defaults against the attached record and public issuer announcements. The import runs once when an existing browser opens the updated site and retains visitor dates that differ from the built-in defaults. The full history panel links each added or corrected date to its announcement or contemporaneous report. Other dates from the attached workbook remain as supplied and have not each been independently verified.
+
+Run `python3 scripts/build-announcement-audit.py OUTPUT_DIR` to export an Arabic quarter-by-quarter CSV, a company summary CSV and a readable HTML gap report. The audit covers 250 operating companies from 2021 through each company's latest published quarter. It identifies 56 internal quarter cells in years with semiannual reporting, four cells affected by fiscal-year changes, and 650 cells before a company's first available result. These are disclosed as gaps, not filled with inferred dates. Nineteen listed real-estate funds are outside this operating-company results audit.

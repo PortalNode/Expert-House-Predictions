@@ -490,6 +490,7 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 </style>
 <link rel="stylesheet" href="assets/interface.css">
+<link rel="stylesheet" href="assets/unified-workspace.css">
 </head>
 <body>
 <a class="skip-link" href="#mainContent">انتقل إلى المحتوى</a>
@@ -969,6 +970,9 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
 
 </main>
 
+<script src="assets/announcement-history.js"></script>
+<script src="assets/announcement-updates.js"></script>
+<script src="assets/earnings-core.js"></script>
 <script src="assets/entry-number.js"></script>
 <script src="assets/expert-coverage.js"></script>
 <script src="assets/riyad-capital-q3-2026.js"></script>
@@ -2720,7 +2724,7 @@ function renderAnnouncementCalendar(){
   const confidenceLabel={confirmed:'موعد مسجل',high:'ثقة مرتفعة',medium:'ثقة متوسطة',low:'ثقة أولية'}[pred?.confidence]||'لا توجد عينة كافية';
   const confidenceClass=pred?.confidence==='high'||pred?.confidence==='confirmed'?'high':pred?.confidence==='medium'?'mid':'low';
   const targetValue=rec[year+'_'+qr]||'';
-  const predHTML=pred?'<div class="prediction-card"><div><div style="font-size:11px;color:var(--t2)">'+(pred.confirmed?'موعد الإعلان المسجل':'الموعد المتوقع لـ '+QL[qr]+' '+year)+'</div><div class="prediction-date">'+formatFullDate(pred.date)+'</div><div class="prediction-range">'+(pred.confirmed?'القيمة الفعلية المحفوظة':'النطاق المرجح: '+formatShortDate(pred.rangeStart)+' — '+formatShortDate(pred.rangeEnd))+'</div></div><div class="pred-method"><span class="confidence '+confidenceClass+'">'+confidenceLabel+'</span><br>'+(pred.confirmed?'يمكن تعديل الموعد من الحقل أدناه.':'مبني على '+pred.count+' إعلان تاريخي'+(pred.fallback?' من جميع الأرباع':' لنفس الربع')+'، بمتوسط تأخر يقارب '+pred.lag+' يومًا عن نهاية الربع.')+'</div></div>'
+  const predHTML=pred?'<div class="prediction-card"><div><div style="font-size:11px;color:var(--t2)">'+(pred.confirmed?'موعد الإعلان المسجل':'الموعد المتوقع لـ '+QL[qr]+' '+year)+'</div><div class="prediction-date">'+formatFullDate(pred.date)+'</div><div class="prediction-range">'+(pred.confirmed?'القيمة الفعلية المحفوظة':'النطاق المرجح: '+formatShortDate(pred.rangeStart)+' — '+formatShortDate(pred.rangeEnd))+'</div></div><div class="pred-method"><span class="confidence '+confidenceClass+'">'+confidenceLabel+'</span><br>'+(pred.confirmed?'يمكن تعديل الموعد من الحقل أدناه.':'مبني على '+pred.count+' إعلان تاريخي لنفس الربع المالي، مع نقل التواريخ إلى السنة المختارة.')+'</div></div>'
     :'<div class="prediction-card" style="border-color:var(--b1);background:var(--card2)"><div><div style="font-weight:700">يلزم سجل تاريخي للتوقع</div><div class="prediction-range">أدخل تاريخًا واحدًا على الأقل، ويفضل 3–5 تواريخ للربع نفسه.</div></div></div>';
   const years=Array.from({length:5},(_,i)=>year-1-i);
   let rows='';
@@ -4310,5 +4314,6 @@ document.addEventListener('keydown',e=>{
 
 </script>
 <script src="assets/interface.js"></script>
+<script src="assets/unified-workspace.js"></script>
 </body>
 </html>
