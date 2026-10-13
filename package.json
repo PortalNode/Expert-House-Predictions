@@ -10,7 +10,7 @@
     "test": "node --test tests/*.test.cjs",
     "check": "npm run build && npm test && git diff --check",
     "typecheck": "tsc --noEmit",
-    "test:browser": "node tests/browser.cjs"
+    "test:browser": "node tests/browser.cjs && node tests/experience-browser.cjs"
   },
   "devDependencies": {
     "typescript": "5.9.3"

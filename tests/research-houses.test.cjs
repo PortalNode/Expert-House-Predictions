@@ -1,0 +1,40 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const {createRegistry,saveHouse}=require('../src/research-houses.ts');
+test('a new research house without forecasts survives a backup round trip and rejects equivalent names',()=>{
+ const initial=createRegistry(['الرياض المالية']);
+ const added=saveHouse(initial,null,{name:'أفق المالية',shortName:'أفق',aliases:['Afaq Capital']});
+ const restored=createRegistry(['الرياض المالية'],JSON.parse(JSON.stringify(added)));
+ assert.equal(restored.length,2);
+ assert.deepEqual(restored[1].aliases,['Afaq Capital']);
+ assert.equal(restored[1].shortName,'أفق');
+ assert.throws(()=>saveHouse(restored,null,{name:' افق   المالية '}),/موجود/);
+ assert.throws(()=>saveHouse(restored,null,{name:'بيت آخر',aliases:['Afaq Capital']}),/موجود/);
+ assert.throws(()=>saveHouse(restored,null,{name:'<img onerror=alert(1)>'}),/صالح/);
+});
+test('renaming and archiving keep every forecast and source under the same house',()=>{
+ const {applyRegistry,resolveHouse}=require('../src/research-houses.ts');
+ let registry=createRegistry(['الرياض المالية']);
+ const original={forecasts:{'2026_q3':[{name:'سابك',actual:8,forecasts:{'الرياض المالية':0,'بيت مستقل':-4}}]},provenance:{'2010|2026_q3|forecast|الرياض المالية':{source:'تقرير',expert:'الرياض المالية'}},announcements:{'سابك':{'2026_q3':'2026-10-12'}}};
+ registry=saveHouse(registry,registry[0].id,{name:'الرياض للأبحاث',archived:true});
+ const changed=applyRegistry(original,registry);
+ assert.deepEqual(changed.forecasts['2026_q3'][0].forecasts,{'الرياض للأبحاث':0,'بيت مستقل':-4});
+ assert.equal(changed.provenance['2010|2026_q3|forecast|الرياض للأبحاث'].source,'تقرير');
+ assert.equal(resolveHouse(registry,'الرياض المالية').name,'الرياض للأبحاث');
+ assert.equal(resolveHouse(createRegistry(['الرياض المالية'],registry),'الرياض المالية').archived,true);
+ assert.equal(createRegistry([],registry)[0].id,registry[0].id);
+ assert.equal(original.forecasts['2026_q3'][0].forecasts['الرياض المالية'],0);
+ assert.deepEqual(changed.announcements,original.announcements);
+ const conflict={forecasts:{'2026_q3':[{name:'سابك',forecasts:{'الرياض المالية':1,'الرياض للأبحاث':2}}]}};
+ assert.throws(()=>applyRegistry(conflict,registry),/تعارض/);
+});
+test('restoring a registry merges renamed houses and retains an empty new house',()=>{
+ const {mergeRegistry}=require('../src/research-houses.ts');
+ let saved=createRegistry(['الرياض المالية']);
+ saved=saveHouse(saved,saved[0].id,{name:'الرياض للأبحاث'});
+ saved=saveHouse(saved,null,{name:'بيت جديد',archived:true});
+ const restored=mergeRegistry(createRegistry(['الرياض المالية','الأهلي المالية']),saved);
+ assert.equal(restored.length,3);
+ assert.equal(restored.filter(h=>h.name.includes('الرياض')).length,1);
+ assert.equal(restored.find(h=>h.name==='بيت جديد').archived,true);
+});

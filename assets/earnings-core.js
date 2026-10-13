@@ -706,7 +706,7 @@ function createEngine(config
         }
       }
     }
-    if (!rows.length && !issues.length)
+    if (!rows.length && !issues.length && ![payload.expertRegistry, payload.experts].some(value => Array.isArray(value) && value.length))
       throw Error("لا توجد بيانات قابلة للاستيراد");
     if (payload.provenance)
       for (const row of rows) {

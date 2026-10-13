@@ -19,6 +19,9 @@
   const ISSUES = new Map(
     ISSUE_ROWS.map((r) => [[r.symbol, r.year, r.quarter, r.date].join("|"), r]),
   );
+  const DEFAULT_EXPERTS = [...EXPERTS];
+  const BASE_FORECASTS = structuredClone(D25);
+  let expertRegistry = ResearchHouses.createRegistry(DEFAULT_EXPERTS);
   const KEY = "finUnifiedV1";
   const UNDO = "finUnifiedUndoV1";
   const aliases = { ...CO_ALIASES };
@@ -90,7 +93,7 @@
       }
       forecasts[key] = [...rows.values()];
     }
-    return { forecasts, announcements: S.announcements, provenance };
+    return { forecasts, announcements: S.announcements, provenance, expertRegistry };
   };
   const snapshot = (state) => ({
     version: 5,
@@ -101,23 +104,25 @@
   });
   const originalSaveLS = saveLS,
     originalSaveDates = saveAnnouncementLS;
+  function registryFor(state) {
+    const discovered = Object.values(state.forecasts || {}).filter(Array.isArray).flatMap(rows => rows.flatMap(row => Object.keys(row.forecasts || {})));
+    return ResearchHouses.createRegistry(DEFAULT_EXPERTS, state.expertRegistry || expertRegistry, [...(state.experts || []), ...discovered]);
+  }
   function installState(state) {
+    expertRegistry = registryFor(state);
+    state = ResearchHouses.applyRegistry(state, expertRegistry);
+    EXPERTS.splice(0, EXPERTS.length, ...expertRegistry.map(house => house.name));
+    const base = ResearchHouses.applyRegistry({forecasts: BASE_FORECASTS}, expertRegistry).forecasts;
+    for (const key of Object.keys(D25)) D25[key] = base[key];
     S.extra = state.forecasts;
     S.announcements = state.announcements;
     provenance = state.provenance || {};
-    for (const entries of Object.values(S.extra))
-      if (Array.isArray(entries))
-        for (const row of entries)
-          for (const expert of Object.keys(row.forecasts || {}))
-            if (expert && !EXPERTS.includes(expert)) EXPERTS.push(expert);
-    engine = EarningsCore.createEngine({
-      companies: COMPANIES,
-      aliases,
-      experts: EXPERTS,
-    });
+    engine = EarningsCore.createEngine({companies: COMPANIES, aliases, experts: EXPERTS});
     recalculateAllStoredRows();
+    if (globalThis.refreshHouseControls) refreshHouseControls();
   }
   function persist(state, undo = false) {
+    state = {...ResearchHouses.applyRegistry(state, registryFor(state)), expertRegistry: registryFor(state)};
     const envelope = snapshot(state);
     if (undo) localStorage.setItem(UNDO, JSON.stringify(snapshot(current())));
     localStorage.setItem(KEY, JSON.stringify(envelope)); // One authoritative write; never report success on failure.
@@ -418,9 +423,10 @@
       return old != null ? "موجود: " + old : "جديد";
     };
     review.innerHTML = `<div class="u-review-head"><div><span class="u-eyebrow">معاينة قبل الحفظ</span><h3>${h(rtl(pending.length + " سجل • " + usable + " جاهز للمراجعة"))}</h3><p>راجع الشركة والفترة والمبالغ. الصفوف ذات الملاحظات تحتاج انتباهك.</p></div><button class="btn bo" id="uCancel">إلغاء</button></div>
+    ${backupPayload?.expertRegistry?.length ? `<p class="u-info">ستُستعاد أيضًا بيوت الخبرة وأسماؤها البديلة وحالة الأرشفة من النسخة الاحتياطية.</p>` : ""}
     ${result.issues.length ? '<div class="u-warning">' + result.issues.map((s) => h(rtl(s))).join("<br>") + "</div>" : ""}
     ${
-      pending.length
+      (pending.length || backupPayload?.expertRegistry?.length || backupPayload?.experts?.length)
         ? `<div class="u-review-settings"><label>التعامل مع البيانات الموجودة<select id="uPolicy"><option value="preserve">الاحتفاظ بالموجود وإضافة الناقص</option><option value="replace">استبدال القيم الموجودة بالصفوف المحددة</option></select></label>${usd ? '<label>ريال لكل دولار — أدخله صراحةً<input id="uFx" type="number" min="0.0001" step="0.0001" placeholder="سعر التحويل الذي تعتمد عليه"></label>' : ""}<label class="u-check"><input id="uSelectAll" type="checkbox"> تحديد الصفوف السليمة</label></div>
     <div class="u-table-scroll"><table class="u-table u-edit-table"><thead><tr><th>حفظ</th><th>الشركة</th><th>الفترة</th><th>النوع / المصدر</th><th>القيمة بالمليون</th><th>المماثل</th><th>تاريخ الإعلان</th><th>المراجعة</th></tr></thead><tbody>${pending
       .map(
@@ -443,7 +449,7 @@
     }`;
     labelCells(review);
     $("uCancel").onclick = invalidate;
-    if (pending.length) {
+    if (pending.length || backupPayload?.expertRegistry?.length || backupPayload?.experts?.length) {
       $("uSelectAll").onchange = (e) => {
         review
           .querySelectorAll('[data-field="selected"]')
@@ -524,6 +530,8 @@
       else {
         const text = $("uText").value.trim();
         if (!text) throw Error("ألصق محتوى أو ارفع ملفًا أولًا");
+        const named = opts.expert ? ResearchHouses.resolveHouse(expertRegistry, opts.expert) : expertRegistry.find(house => !house.archived && [house.name, house.shortName, ...house.aliases].filter(Boolean).some(name => normalizeArabicLookup(text).includes(normalizeArabicLookup(name))));
+        if (named) opts.expert = named.name;
         showPreview(engine.preview(text, opts));
       }
     } catch (e) {
@@ -545,6 +553,9 @@
         row.year = Number(read("year"));
         row.quarter = read("quarter");
         row.expert = read("expert") ?? row.expert;
+        const house = ResearchHouses.resolveHouse(expertRegistry, row.expert);
+        if (house?.archived && !backupPayload) throw Error("بيت الخبرة مؤرشف؛ أعد تفعيله قبل إضافة توقعات جديدة");
+        if (house) row.expert = house.name;
         row.date = read("date") || null;
         if (row.kind !== "date") {
           row.value = EarningsCore.parseAmount(read("value"));
@@ -559,13 +570,17 @@
         // Explicitly selecting a flagged row acknowledges the displayed period warning; all fields still validate at commit.
         selected.push(row);
       }
-      const result = engine.commit(selected, current(), {
+      const metadataOnly = !pending.length && (backupPayload?.expertRegistry?.length || backupPayload?.experts?.length);
+      const result = metadataOnly ? {state:current(), errors:[], changed:0, skipped:0} : engine.commit(selected, current(), {
         policy: $("uPolicy").value,
         fx: $("uFx") ? Number($("uFx").value) : undefined,
       });
       if (result.errors.length)
         throw Error([...new Set(result.errors)].join(" • "));
-      if (!result.changed) {
+      const incomingRegistry = backupPayload?.expertRegistry || (backupPayload?.experts || []).map(name => ({name, aliases:[], shortName:"", archived:false}));
+      const nextRegistry = incomingRegistry?.length ? ResearchHouses.mergeRegistry(expertRegistry, incomingRegistry) : expertRegistry;
+      const registryChanged = JSON.stringify(nextRegistry) !== JSON.stringify(expertRegistry);
+      if (!result.changed && !registryChanged) {
         error(
           "لا توجد قيم جديدة للحفظ؛ " +
             result.skipped +
@@ -573,16 +588,15 @@
         );
         return;
       }
-      persist(result.state, true);
+      persist({...result.state, expertRegistry:nextRegistry}, true);
       const first = selected[0];
-      S.yr = String(first.year);
-      S.qr = first.quarter;
+      if (first) { S.yr = String(first.year); S.qr = first.quarter; }
       buildYearSelector();
       refresh();
       pending = [];
       backupPayload = null;
       $("uReview").innerHTML =
-        `<div class="u-success"><span>✓</span><div><h3>تم الحفظ وربط البيانات</h3><p>${h(rtl(result.changed + " قيمة محفوظة • " + result.skipped + " قيمة أُبقيت كما هي"))}</p><p>تجد القيم في النتائج، والمواعيد في سجل الإعلانات. يمكنك التراجع عن هذا الاستيراد.</p><button class="btn bo" id="uViewResults">عرض التوقعات والنتائج</button> <button class="btn bo" id="uViewCalendar">فتح المواعيد</button></div></div>`;
+        `<div class="u-success"><span>✓</span><div><h3>تم الحفظ وربط البيانات</h3><p>${h(rtl(result.changed + " قيمة محفوظة • " + result.skipped + " قيمة أُبقيت كما هي"))}</p>${registryChanged ? "<p>تمت استعادة سجل بيوت الخبرة وأسمائها البديلة وحالة الأرشفة.</p>" : ""}<p>تجد القيم في النتائج، والمواعيد في سجل الإعلانات. يمكنك التراجع عن هذا الاستيراد.</p><button class="btn bo" id="uViewResults">عرض التوقعات والنتائج</button> <button class="btn bo" id="uViewCalendar">فتح المواعيد</button></div></div>`;
       $("uViewResults").onclick = () => navigateSection("t1");
       $("uViewCalendar").onclick = () => navigateSection("t6");
       showToast("تم حفظ البيانات على هذا المتصفح");
@@ -1029,6 +1043,19 @@
       .join("")}</tbody></table></div>`;
     $("annContent").append(details);
   }
+  globalThis.HouseWorkspace = {
+    list: () => structuredClone(expertRegistry),
+    save: (id, input) => {
+      const next = ResearchHouses.saveHouse(expertRegistry, id, input);
+      const oldName = expertRegistry.find(house => house.id === id)?.name;
+      persist({...current(), expertRegistry:next});
+      if (S.exp === oldName) S.exp = input.name.trim();
+      invalidate();
+      refresh();
+      return next.find(house => house.id === id) || next[next.length-1];
+    },
+    backup: () => snapshot(current()),
+  };
   // Export functions remain accessible to the existing controls and shortcuts.
   $("uPreview").title = "لا تُحفظ أي قيمة قبل مراجعتها";
   initAnnouncementCompanies();
