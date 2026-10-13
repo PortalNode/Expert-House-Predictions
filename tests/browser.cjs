@@ -17,6 +17,14 @@ const assert = require("node:assert/strict");
   await page.route("https://**/*", (r) => r.abort());
   await page.goto("file://" + path.resolve("index.html"));
   await page.waitForSelector("#unifiedWorkspace");
+  assert.equal(
+    await page.evaluate(() => S.announcements["الرياض"]["2021_q1"]),
+    "2021-04-29",
+  );
+  assert.equal(
+    await page.evaluate(() => S.announcements["الرياض"]["2025_q3"]),
+    "2025-10-20",
+  );
   console.log(
     "source gaps",
     await page.evaluate(() =>
@@ -95,6 +103,7 @@ const assert = require("node:assert/strict");
   console.log("national", await page.locator("#uCalendarBody").innerText());
   await page.locator("#uCalendarBody [data-open]").first().click();
   await page.click("#uFullHistory summary");
+  assert.ok(await page.locator("#uFullHistory a[href^='https://']").count() > 0);
   await page.screenshot({
     path: "work/browser-check/desktop-history.png",
     fullPage: true,
@@ -201,6 +210,27 @@ const assert = require("node:assert/strict");
   );
   console.log("errors", errors);
   assert.deepEqual(errors, []);
+  const migrated = await browser.newPage();
+  await migrated.addInitScript(() => {
+    localStorage.setItem("finUnifiedV1", JSON.stringify({
+      version: 5,
+      seedVersion: 1,
+      forecasts: {},
+      announcements: { "الرياض": { "2021_q1": "2021-04-30", "2025_q3": "2025-10-19" } },
+      provenance: {},
+    }));
+  });
+  await migrated.goto("file://" + path.resolve("index.html"));
+  await migrated.waitForSelector("#unifiedWorkspace");
+  assert.deepEqual(
+    await migrated.evaluate(() => [
+      S.announcements["الرياض"]["2021_q1"],
+      S.announcements["الرياض"]["2025_q3"],
+      S.announcements["نماء للكيماويات"]["2021_q1"],
+    ]),
+    ["2021-04-30", "2025-10-19", "2021-05-02"],
+  );
+  await migrated.close();
   await browser.close();
 })().catch((e) => {
   console.error(e);

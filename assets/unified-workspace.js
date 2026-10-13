@@ -11,6 +11,9 @@
     ) +
     "\u2069";
   const SEED = globalThis.ANNOUNCEMENT_HISTORY;
+  const UPDATES = globalThis.ANNOUNCEMENT_UPDATES || {
+    records: [], verifiedBankCorrections: [], asOf: "",
+  };
   const KEY = "finUnifiedV1";
   const UNDO = "finUnifiedUndoV1";
   const aliases = { ...CO_ALIASES };
@@ -127,13 +130,43 @@
       installState(saved);
       seedVersion = saved.seedVersion || 0;
     }
-    if (seedVersion < 1) {
+    if (seedVersion < 2) {
+      if (seedVersion < 1)
+        S.announcements = EarningsCore.seedHistory(
+          SEED.forecasts,
+          S.announcements,
+          (n) => engine.resolve(n),
+        );
+      const grouped = new Map();
+      for (const record of [
+        ...UPDATES.records,
+        ...(UPDATES.verifiedBankCorrections || []),
+      ]) {
+        if (!record.replacesBuiltInBankDate) {
+          if (!grouped.has(record.symbol))
+            grouped.set(record.symbol, {
+              symbol: record.symbol,
+              company: record.company,
+              history: [],
+            });
+          grouped.get(record.symbol).history.push(record);
+        }
+        const name = engine.resolve(record.symbol)?.name;
+        const key = record.year + "_" + record.quarter.toLowerCase();
+        const builtInBankDate = BANK_ANNOUNCEMENT_SEED[name]?.[key];
+        if (
+          builtInBankDate &&
+          S.announcements[name]?.[key] === builtInBankDate &&
+          !provenance[record.symbol + "|" + key + "|date"]
+        )
+          S.announcements[name][key] = record.date;
+      }
       S.announcements = EarningsCore.seedHistory(
-        SEED.forecasts,
+        [...grouped.values()],
         S.announcements,
         (n) => engine.resolve(n),
       );
-      seedVersion = 1;
+      seedVersion = 2;
       persist(current());
     }
   } catch (error) {
@@ -708,7 +741,13 @@
       SEED.forecasts.length +
       " شركة، بآخر تحديث " +
       SEED.meta.generatedAt +
-      ". التواريخ من المصدر المرفق ولم تُتحقق خارجيًا.",
+      ". أضيف " +
+      UPDATES.records.length +
+      " إعلانًا موثقًا بروابط مصادره حتى " +
+      UPDATES.asOf +
+      "، وطُوبق " +
+      (UPDATES.verifiedBankCorrections || []).length +
+      " تاريخًا من القيم البنكية المدمجة مع إعلانات منشورة. تواريخ الملف الأصلي لم تُتحقق كل واحدة منها خارجيًا.",
   );
   const fiscal = {
     1304: "30/09",
@@ -898,6 +937,10 @@
     const name = canonicalCompany(company.name),
       history = S.announcements[name] || {};
     const source = SEED.forecasts.find((c) => c.symbol === company.symbol);
+    const imported = [
+      ...UPDATES.records,
+      ...(UPDATES.verifiedBankCorrections || []),
+    ].filter((r) => r.symbol === company.symbol);
     const details = document.createElement("details");
     details.id = "uFullHistory";
     details.className = "u-methodology";
@@ -911,8 +954,21 @@
             r.quarter.toLowerCase() === q &&
             r.date === date,
         );
+        const update = imported.find(
+          (r) =>
+            r.year === Number(y) &&
+            r.quarter.toLowerCase() === q &&
+            r.date === date,
+        );
         const meta = provenance[company.symbol + "|" + key + "|date"];
-        return `<tr><td>${h(rtl((QL[q] || q) + " " + y))}</td><td>${h(rtl(formatFullDate(date)))}</td><td>${h(rtl(original?.time || "—"))}</td><td>${h(meta?.source || (original ? "السجل المرفق • " + (original.verification || "سجل تاريخي") : "سجل المتصفح"))}</td></tr>`;
+        const sourceCell = meta?.source
+          ? h(meta.source)
+          : update?.sourceUrl?.startsWith("https://")
+            ? `<a href="${h(update.sourceUrl)}" target="_blank" rel="noopener noreferrer">${h(update.sourceLabel || "إعلان النتائج")}</a>`
+            : original
+              ? h("السجل المرفق • " + (original.verification || "سجل تاريخي"))
+              : h("سجل المتصفح");
+        return `<tr><td>${h(rtl((QL[q] || q) + " " + y))}</td><td>${h(rtl(formatFullDate(date)))}</td><td>${h(rtl(original?.time || "—"))}</td><td>${sourceCell}</td></tr>`;
       })
       .join("")}</tbody></table></div>`;
     $("annContent").append(details);
