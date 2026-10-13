@@ -16,7 +16,8 @@ const assert = require("node:assert/strict");
   page.on("pageerror", (e) => errors.push(e.message));
   await page.route("https://**/*", (r) => r.abort());
   await page.goto("file://" + path.resolve("index.html"));
-  await page.waitForSelector("#unifiedWorkspace");
+  await page.waitForSelector("#unifiedWorkspace", {state:"attached"});
+  await page.click("#globalAdd");
   assert.equal(
     await page.evaluate(() => S.announcements["الرياض"]["2021_q1"]),
     "2021-04-29",
@@ -78,7 +79,8 @@ const assert = require("node:assert/strict");
   await page.click("#uCommit");
   assert.equal(await page.locator(".u-success").count(), 1);
   await page.reload();
-  await page.waitForSelector("#unifiedWorkspace");
+  await page.waitForSelector("#unifiedWorkspace", {state:"attached"});
+  await page.click("#globalAdd");
   assert.equal(
     await page.evaluate(
       () =>
@@ -135,7 +137,7 @@ const assert = require("node:assert/strict");
   });
   await page.setViewportSize({ width: 390, height: 844 });
 
-  await page.selectOption("#sectionSelect", "t0");
+  await page.click("#globalAdd");
   await page.evaluate(() =>
     document.getElementById("toast").classList.remove("on"),
   );
@@ -219,7 +221,8 @@ const assert = require("node:assert/strict");
   await page.click("#uCommit");
   assert.equal(await page.locator(".u-success").count(), 1);
   await page.reload();
-  await page.waitForSelector("#unifiedWorkspace");
+  await page.waitForSelector("#unifiedWorkspace", {state:"attached"});
+  await page.click("#globalAdd");
   assert.equal(
     await page.evaluate(
       () =>
@@ -245,7 +248,7 @@ const assert = require("node:assert/strict");
     }));
   });
   await migrated.goto("file://" + path.resolve("index.html"));
-  await migrated.waitForSelector("#unifiedWorkspace");
+  await migrated.waitForSelector("#unifiedWorkspace", {state:"attached"});
   assert.deepEqual(
     await migrated.evaluate(() => [
       S.announcements["الرياض"]["2021_q1"],
@@ -269,7 +272,7 @@ const assert = require("node:assert/strict");
     }));
   });
   await previousRelease.goto("file://" + path.resolve("index.html"));
-  await previousRelease.waitForSelector("#unifiedWorkspace");
+  await previousRelease.waitForSelector("#unifiedWorkspace", {state:"attached"});
   assert.deepEqual(
     await previousRelease.evaluate(() => [
       S.announcements["المتقدمة"]["2026_q3"],
@@ -292,7 +295,7 @@ const assert = require("node:assert/strict");
     }));
   });
   await previousPreliminary.goto("file://" + path.resolve("index.html"));
-  await previousPreliminary.waitForSelector("#unifiedWorkspace");
+  await previousPreliminary.waitForSelector("#unifiedWorkspace", {state:"attached"});
   assert.deepEqual(await previousPreliminary.evaluate(() => [
     S.announcements["المجموعة السعودية"]["2025_q4"],
     S.announcements["أسواق ع العثيم"]["2024_q4"],

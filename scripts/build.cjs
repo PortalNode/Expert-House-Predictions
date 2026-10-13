@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const { stripTypeScriptTypes } = require("node:module");
-for (const name of ["earnings-core"]) {
+const exportsByModule = {"earnings-core": ["EarningsCore", "createEngine, parseAmount, parseDate, projectDate, seedHistory"], "research-houses": ["ResearchHouses", "createRegistry, saveHouse, resolveHouse, applyRegistry, mergeRegistry"]};
+for (const name of Object.keys(exportsByModule)) {
   const source = fs.readFileSync("src/" + name + ".ts", "utf8");
   const js = stripTypeScriptTypes(source, { mode: "strip" }).replace(
     /^export /gm,
@@ -12,6 +13,6 @@ for (const name of ["earnings-core"]) {
       name +
       ".ts. Run npm run build. */\n(()=>{\n" +
       js +
-      "\nglobalThis.EarningsCore = {createEngine, parseAmount, parseDate, projectDate, seedHistory};\n})();\n",
+      "\nglobalThis." + exportsByModule[name][0] + " = {" + exportsByModule[name][1] + "};\n})();\n",
   );
 }

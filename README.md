@@ -1,6 +1,6 @@
 # رَصد الأرباح — تحسين الواجهة
 
-واجهة فاتحة بلمسات خضراء، مع دعم المظهر الداكن والشاشات الصغيرة.
+واجهة عربية موحدة للتوقعات والنتائج ومواعيد الإعلانات، مع ثلاثة مظاهر ودعم الشاشات الصغيرة.
 
 ## التشغيل
 
@@ -32,9 +32,9 @@ node --test tests/input-validation.test.cjs
 
 نجحت اختبارات عدّ الشركات دون تكرار، والقيم الفارغة والصفر والخسائر والأرقام العربية ومنع الحفظ الجزئي عند وجود حقل غير صالح.
 
-تم التحقق في المتصفح من الإدخال والمراجعة والحفظ والإضافة اليدوية وتحديث مؤشر بيت الخبرة بعد الحفظ وتغيير الفترة، ومن التنقل بين الأقسام الثمانية وعدم تجاوز عرض الجوال، والرجوع والتقدم والمظهر الداكن.
+تم التحقق في المتصفح من الإدخال والمراجعة والحفظ والإضافة اليدوية وتحديث مؤشر بيت الخبرة بعد الحفظ وتغيير الفترة، ومن التنقل بين الأقسام وعدم تجاوز عرض الجوال، والرجوع والتقدم والمظهر الداكن.
 
-المشروع الأصلي صفحة ثابتة بلغة جافاسكربت، دون عملية بناء أو تثبيت حزم جديدة. لم يُختبر التحليل المتقدم بمفتاح خارجي.
+المشروع صفحة ثابتة مع وحدات أساسية بلغة TypeScript تُبنى إلى JavaScript. لم يُختبر التحليل المتقدم بمفتاح خارجي.
 
 ## Unified earnings and announcement workspace
 
@@ -51,3 +51,13 @@ See [integration notes](docs/integration.md) for migration and [validation](docs
 `assets/fiscal-calendars.js` groups all 269 listed companies and funds by their current fiscal-year end, with prior ends and transition years for Cenomi Retail, Cenomi Centers, SADAFCO, National Company for Learning & Education, and Makkah. The calendar filter uses the year selected by the visitor. The 19 listed real-estate funds form a separate group because this audit does not treat their financial reports as operating-company quarters. Current issuer calendars were derived from financial-result notice headings and cross-checked against [Saudi Exchange's fiscal-deadline list](https://www.saudiexchange.sa/wps/portal/saudiexchange/rules-guidance/capital-market-overview/Restrictions-Periods-and-Financials-Deadline?locale=ar); transition announcements are linked in `assets/fiscal-calendars.js`.
 
 Run `python3 scripts/build-announcement-audit.py OUTPUT_DIR` to export the quarter-by-quarter CSV, company summary, fiscal-year classification, first-result comparison, and HTML gap report. The checked-in `data/issuer-results-evidence.json` contains dated issuer-result headings and links from the archived Saudi Exchange notices, mirrored by Mubasher, so the audit is reproducible without network access. Across 250 operating companies since 2021, 3,473 entries from the attached file matched an archived announcement heading and 1,222 entries have a specific source link in the supplemental or correction data. Another 105 original dates had no matching archived notice, and 11 matched a notice whose heading did not agree with the stored year/quarter label; these 116 are flagged in `assets/announcement-issues.js` and are not presented as confirmed announcements or used to project future dates. A heading mismatch can reflect a fiscal-year transition or a malformed notice, so it requires individual review before correction. The audit also records 56 half-year reporting cells, four fiscal-transition cells, and 650 cells before the first result found for the company. These are not filled with inferred dates.
+
+## Interface and research houses — 13 October 2026
+
+The results dashboard is the starting page. Four tabs link results, announcement dates, research houses, and forecast accuracy. The header provides **إضافة بيانات** and **الإعدادات**. Company names open their financial detail page. Stock-performance views, price columns, and remote price requests have been removed.
+
+In **بيوت الخبرة**, choose **إضافة بيت خبرة** to save a name, optional short name, and alternative names even before entering forecasts. Select a house and choose **إدارة البيت المحدد** to rename or archive it. Renaming keeps historical forecasts and their sources. Archiving hides it from new-entry suggestions while retaining its historical contribution to averages; it can be reactivated. Duplicate names and aliases are rejected. JSON backups include this registry, including empty houses.
+
+**الإعدادات** offers كحلي فاتح, زمردي هادئ, and ليلي احترافي. The selection persists in the current browser. Existing earnings and announcement-date data stay available.
+
+Run `npm run check`, `npm run typecheck`, and `npm run test:browser`. The browser tests require Playwright and Chrome; set `PLAYWRIGHT_PATH` and `CHROME_PATH` if they are not at the defaults in the test scripts.
