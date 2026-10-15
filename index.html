@@ -8,9 +8,8 @@
 <meta name="theme-color" content="#f4f3ef">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
-@font-face{font-family:'JetBrains Mono';src:local('SF Mono'),local('Menlo');font-display:swap}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:"SF Arabic",".SF Arabic",-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;direction:rtl;font-variant-numeric:tabular-nums}
+body{font-family:system-ui;background:var(--bg);color:var(--t1);min-height:100vh;direction:rtl;font-variant-numeric:tabular-nums}
 .hdr{background:var(--card);border-bottom:1px solid var(--b1);padding:0 28px;position:sticky;top:0;z-index:200;box-shadow:0 4px 24px rgba(0,0,0,.25);backdrop-filter:blur(12px)}
 .hdr-i{display:flex;align-items:center;justify-content:space-between;padding:12px 0;gap:12px;flex-wrap:wrap}
 .logo{display:flex;align-items:center;gap:10px}
@@ -31,7 +30,7 @@ body{font-family:"SF Arabic",".SF Arabic",-apple-system,BlinkMacSystemFont,"SF P
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
 .sc{background:var(--card);border:1px solid var(--b1);border-radius:var(--radius);padding:14px 18px;transition:var(--transition);position:relative;overflow:hidden}.sc::before{content:'';position:absolute;top:0;right:0;width:3px;height:100%;background:var(--gold);opacity:0;transition:opacity .2s}.sc:hover::before{opacity:1}.sc:hover{box-shadow:0 4px 20px rgba(0,0,0,.15);transform:translateY(-1px)}
 .sc-l{font-size:10px;color:var(--t3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.sc-v{font-size:22px;font-weight:700;color:var(--gold);font-family:'JetBrains Mono',monospace}
+.sc-v{font-size:22px;font-weight:700;color:var(--gold);font-family:system-ui}
 .sc-s{font-size:10px;color:var(--t2);margin-top:2px}
 .tw{background:var(--card);border:1px solid var(--b1);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--sh);transition:var(--transition)}
 .th{display:flex;align-items:center;justify-content:space-between;padding:14px 19px;border-bottom:1px solid var(--b1);gap:10px;flex-wrap:wrap}
@@ -46,11 +45,11 @@ thead tr{background:var(--card2);border-bottom:2px solid var(--b1)}
 th{padding:9px 10px;text-align:right;color:var(--t2);font-weight:600;font-size:10px;letter-spacing:.3px;border-bottom:1px solid var(--b1);white-space:nowrap}
 th.n{text-align:right;direction:ltr}
 td{padding:8px 10px;border-bottom:1px solid rgba(30,45,71,.35);vertical-align:middle}.td-c{text-align:center}
-td.n{text-align:right;font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;direction:ltr;white-space:nowrap}
+td.n{text-align:right;font-family:system-ui;font-size:11.5px;font-weight:600;direction:ltr;white-space:nowrap}
 tbody tr:hover{background:var(--hov)}
 tbody tr:last-child td{border-bottom:none}
 .cn{font-weight:600;color:var(--t1)}
-.badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;min-width:52px;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;justify-content:center;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;font-family:system-ui;min-width:52px;white-space:nowrap}
 .bp{background:rgba(16,185,129,.15);color:var(--grn)}.bn{background:rgba(239,68,68,.15);color:var(--red)}.bz{background:rgba(139,156,184,.15);color:var(--t2)}
 .bm{display:inline-flex;align-items:center;gap:2px;padding:2px 6px;background:rgba(212,168,83,.15);border:1px solid rgba(212,168,83,.3);border-radius:4px;font-size:9.5px;color:var(--gold)}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
@@ -79,7 +78,7 @@ tbody tr:last-child td{border-bottom:none}
 .ei{padding:11px 16px;border-bottom:1px solid rgba(30,45,71,.4);cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:space-between}
 .ei:last-child{border-bottom:none}.ei:hover{background:var(--hov)}
 .ei.on{background:rgba(212,168,83,.09);border-right:3px solid var(--gold)}
-.en{font-size:13px;font-weight:500}.ea{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600}
+.en{font-size:13px;font-weight:500}.ea{font-family:system-ui;font-size:11px;font-weight:600}
 .exp-period-note{padding:9px 14px;border-bottom:1px solid var(--b1);color:var(--t2);font-size:11px;line-height:1.6}
 .ei.exp-entry{display:block;padding:10px 14px}
 .exp-entry-head,.exp-entry-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
@@ -97,10 +96,10 @@ tbody tr:last-child td{border-bottom:none}
 .lb-sh{padding:12px 16px;border-bottom:1px solid var(--b1);font-size:13px;font-weight:600}
 .ri{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid rgba(30,45,71,.4)}
 .ri:last-child{border-bottom:none}
-.rn{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:var(--t3);width:24px;text-align:center}
+.rn{font-family:system-ui;font-size:16px;font-weight:700;color:var(--t3);width:24px;text-align:center}
 .rn.r1{color:var(--gold)}.rn.r2{color:#c0c0c0}.rn.r3{color:#cd7f32}
 .rname{font-size:12px;font-weight:600;flex:1}
-.rw{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold);font-weight:600}
+.rw{font-family:system-ui;font-size:12px;color:var(--gold);font-weight:600}
 .rbar{height:3px;background:var(--b1);border-radius:2px;margin-top:3px;overflow:hidden}
 .rbf{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:2px}
 .dg{display:grid;grid-template-columns:1fr 1fr;gap:15px}
@@ -121,7 +120,7 @@ tbody tr:last-child td{border-bottom:none}
 .bpu{background:rgba(167,139,250,.12);border:1px solid rgba(167,139,250,.25);color:var(--purple)}
 .bpu:hover{background:rgba(167,139,250,.22)}
 .hint{background:var(--card2);border:1px solid var(--b2);border-radius:9px;padding:12px;margin-bottom:12px;font-size:12px;line-height:1.9;color:var(--t2)}
-.hint code{color:var(--gold);font-family:'JetBrains Mono',monospace;background:rgba(212,168,83,.1);padding:1px 5px;border-radius:3px}
+.hint code{color:var(--gold);font-family:system-ui;background:rgba(212,168,83,.1);padding:1px 5px;border-radius:3px}
 .ai-ta{width:100%;background:var(--card2);border:1px solid var(--b2);border-radius:9px;padding:12px;color:var(--t1);font-family:inherit;font-size:13px;resize:vertical;min-height:150px;direction:rtl;line-height:1.8}
 .ai-ta:focus{outline:none;border-color:var(--gold)}.ai-ta::placeholder{color:var(--t3)}
 .ar{margin-top:12px;background:var(--card2);border:1px solid var(--b2);border-radius:9px;padding:14px;font-size:13px;display:none}
@@ -130,7 +129,7 @@ tbody tr:last-child td{border-bottom:none}
 .api-title{font-size:12px;font-weight:700;color:var(--purple);margin-bottom:8px}
 .api-steps{font-size:11.5px;color:var(--t2);line-height:2}
 .api-kr{display:flex;gap:8px;margin-top:9px}
-.api-kr input{flex:1;background:var(--card);border:1px solid var(--b2);border-radius:8px;padding:8px 11px;color:var(--t1);font-family:'JetBrains Mono',monospace;font-size:12px;direction:ltr}
+.api-kr input{flex:1;background:var(--card);border:1px solid var(--b2);border-radius:8px;padding:8px 11px;color:var(--t1);font-family:system-ui;font-size:12px;direction:ltr}
 .api-kr input:focus{outline:none;border-color:var(--purple)}.api-kr input::placeholder{color:var(--t3);direction:rtl;font-family:inherit}
 .tag{display:inline-flex;align-items:center;padding:2px 6px;border-radius:4px;font-size:10px;background:rgba(34,211,176,.1);color:var(--teal);border:1px solid rgba(34,211,176,.15)}
 .ptable{width:100%;border-collapse:collapse;font-size:12px;margin-top:9px}
@@ -162,7 +161,7 @@ tbody tr:last-child td{border-bottom:none}
 .act-edit-btn:hover{background:rgba(16,185,129,.3)}
 .ep{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:3px;background:rgba(212,168,83,.1);border:1px solid rgba(212,168,83,.2);color:var(--gold);font-size:9px;cursor:pointer;transition:all .2s;padding:0;line-height:1;flex-shrink:0}
 .ep:hover{background:rgba(212,168,83,.3)}
-.ei2{background:var(--card2);border:1px solid var(--gold);border-radius:5px;color:var(--t1);font-family:"JetBrains Mono",monospace;font-size:11px;padding:3px 7px;width:90px;direction:ltr;text-align:left}
+.ei2{background:var(--card2);border:1px solid var(--gold);border-radius:5px;color:var(--t1);font-family:system-ui;font-size:11px;padding:3px 7px;width:90px;direction:ltr;text-align:left}
 .ei2:focus{outline:none}
 .ec{display:inline-flex;align-items:center;gap:3px;vertical-align:middle}
 .ti{font-size:11px;opacity:.7;margin-left:3px}
@@ -189,7 +188,7 @@ tbody tr{animation:rowIn .12s ease forwards}
 .fmt-card.selected::after{content:"✓";position:absolute;top:8px;left:10px;width:20px;height:20px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#000;font-weight:800;line-height:20px}
 .fmt-thumb{margin:0 auto 10px;border-radius:6px;background:linear-gradient(135deg,var(--b1),var(--bg));display:flex;align-items:center;justify-content:center;font-size:18px;border:1px solid var(--b2)}
 .fmt-name{font-size:12px;font-weight:700;color:var(--t1);margin-bottom:3px}
-.fmt-dim{font-size:10px;color:var(--t3);font-family:'JetBrains Mono',monospace}
+.fmt-dim{font-size:10px;color:var(--t3);font-family:system-ui}
 .fmt-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;margin-top:5px}
 .fmt-badge.soc{background:rgba(96,165,250,.15);color:var(--blue);border:1px solid rgba(96,165,250,.2)}
 .fmt-badge.res{background:rgba(16,185,129,.15);color:var(--grn);border:1px solid rgba(16,185,129,.2)}
@@ -219,9 +218,11 @@ tbody tr{animation:rowIn .12s ease forwards}
 .prev-modal-info{font-size:12px;color:var(--t2);text-align:center}
 
 /* ── Unified product design system ── */
+/* On Apple platforms, system-ui renders Arabic with SF Arabic. Naming SF Arabic directly falls back to Tahoma in Chrome. */
 :root{
-  --font-sans:"SF Arabic",".SF Arabic",-apple-system,BlinkMacSystemFont,"Noto Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif;
-  --font-mono:"SF Mono",Menlo,Monaco,Consolas,monospace;
+  --font-sans:system-ui;
+  --font-ar:system-ui;
+  --font-mono:system-ui;
   --bg:#f4f3ef;--card:#fffefa;--card2:#f0efea;--hov:#e9e7e0;
   --gold:#9b762f;--gold2:#77591f;--teal:#176b55;
   --red:#b64343;--grn:#187a58;--blue:#366d9a;--purple:#675c8f;
@@ -377,8 +378,8 @@ thead tr{background:var(--surface-muted)}th{color:var(--t2);font-weight:650;lett
 
 /* ── Refined data workspace: calmer hierarchy, smoother figures ── */
 :root{
-  --font-sans:"SF Arabic",".SF Arabic",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Tahoma,Arial,sans-serif;
-  --font-num:"SF Arabic",".SF Arabic","SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+  --font-sans:system-ui;
+  --font-num:system-ui;
 }
 [data-theme="light"]{
   --bg:#f6f8f7;--card:#ffffff;--card2:#f5f7f6;--hov:#f0f5f2;
@@ -3566,10 +3567,10 @@ function buildCard(name, yr, qr, fmt, cardType) {
 
   const drawBadge = (cx,ty,val,base,fs) => {
     const r=pctStr(val,base);
-    if(!r){ ctx.font=fs+'px JetBrains Mono,monospace'; ctx.fillStyle='#3a4a68'; ctx.textAlign='center'; ctx.direction='ltr'; ctx.fillText('—',cx,ty+fs); return; }
+    if(!r){ ctx.font=fs+'px system-ui'; ctx.fillStyle='#3a4a68'; ctx.textAlign='center'; ctx.direction='ltr'; ctx.fillText('—',cx,ty+fs); return; }
     const bw=Math.max(fs*4.2, ctx.measureText(r.str).width+36);
     rr(cx-bw/2,ty,bw,fs+20,7, r.pos?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)', r.pos?'rgba(16,185,129,0.45)':'rgba(239,68,68,0.45)');
-    ctx.font='bold '+fs+'px JetBrains Mono,monospace';
+    ctx.font='bold '+fs+'px system-ui';
     ctx.fillStyle=r.pos?'#10b981':'#ef4444'; ctx.textAlign='center'; ctx.direction='ltr';
     ctx.fillText(r.str,cx,ty+fs+2);
   };
@@ -3641,7 +3642,7 @@ function drawCardHeader(ctx,W,row,sym,sector,qLabel,rr,f,th,PAD,top,hH,acColor,l
   rr(PAD,top,W-PAD*2,hH,f(22),hGrad,th.accentSoft+'0.3)',2);
 
   // @e9sce — top-right corner (subtle)
-  ctx.font=`bold ${f(24)}px JetBrains Mono,monospace`;
+  ctx.font=`bold ${f(24)}px system-ui`;
   ctx.fillStyle=th.accentSoft+'0.5)'; ctx.textAlign='right'; ctx.direction='ltr';
   ctx.fillText('@e9sce', W-PAD-f(28), top+f(38));
 
@@ -3664,12 +3665,12 @@ function drawCardHeader(ctx,W,row,sym,sector,qLabel,rr,f,th,PAD,top,hH,acColor,l
     // Draw company name centered
     const maxNameW = W - PAD*2 - f(160);
     let fontSize = f(86);
-    ctx.font = `900 ${fontSize}px Cairo,IBM Plex Sans Arabic,Arial`;
+    ctx.font = `900 ${fontSize}px system-ui`;
     let cName = row.name;
     // Auto-shrink font if too wide
     while(ctx.measureText(cName).width > maxNameW && fontSize > f(40)) {
       fontSize -= f(4);
-      ctx.font = `900 ${fontSize}px Cairo,IBM Plex Sans Arabic,Arial`;
+      ctx.font = `900 ${fontSize}px system-ui`;
     }
     // Truncate if still too wide
     while(ctx.measureText(cName).width > maxNameW && cName.length > 3) {
@@ -3686,7 +3687,7 @@ function drawCardHeader(ctx,W,row,sym,sector,qLabel,rr,f,th,PAD,top,hH,acColor,l
   ctx.strokeStyle=th.accentSoft+'0.2)'; ctx.lineWidth=f(1.5);
   ctx.beginPath(); ctx.moveTo(PAD+f(60), top+hH*0.62); ctx.lineTo(W-PAD-f(60), top+hH*0.62); ctx.stroke();
   // Quarter text
-  ctx.font=`bold ${f(44)}px JetBrains Mono,monospace`;
+  ctx.font=`bold ${f(44)}px system-ui`;
   ctx.fillStyle=acColor||th.accent; ctx.textAlign='center'; ctx.direction='ltr';
   ctx.fillText(qLabel, W/2, qZoneCenterY + f(15));
 }
@@ -3708,32 +3709,32 @@ function drawCardKPI(ctx,W,row,rr,f,th,PAD,top,kH,titleText,mainVal,prevVal,fmtN
 
   // ── RIGHT: متوسط التوقعات ──────────────────────────────────────
   const rCtr = midX + (W/2 - PAD)/2;
-  ctx.font=`${f(28)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(28)}px system-ui`;
   ctx.fillStyle=th.accentSoft+'0.75)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText(titleText, rCtr, lbY);
-  ctx.font=`bold ${f(96)}px JetBrains Mono,monospace`;
+  ctx.font=`bold ${f(96)}px system-ui`;
   ctx.fillStyle=th.accent; ctx.textAlign='center'; ctx.direction='ltr';
   ctx.fillText(fmtN(mainVal), rCtr, numY);
-  ctx.font=`${f(24)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(24)}px system-ui`;
   ctx.fillStyle=th.accentSoft+'0.5)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText('مليون ريال سعودي', rCtr, subY);
 
   // ── LEFT: التغيير عن الربع المماثل ────────────────────────────
   const lCtr = PAD + (midX - PAD)/2;
-  ctx.font=`${f(28)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(28)}px system-ui`;
   ctx.fillStyle=th.t2; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText('التغيير عن الربع المماثل', lCtr, lbY);
 
   const p=pctStr(mainVal,prevVal);
   if(p){
-    ctx.font=`bold ${f(88)}px JetBrains Mono,monospace`;
+    ctx.font=`bold ${f(88)}px system-ui`;
     ctx.fillStyle=p.pos?'#10b981':'#ef4444'; ctx.textAlign='center'; ctx.direction='ltr';
     ctx.fillText(p.str, lCtr, numY);
-    ctx.font=`${f(24)}px Cairo,IBM Plex Sans Arabic,Arial`;
+    ctx.font=`${f(24)}px system-ui`;
     ctx.fillStyle=p.pos?'rgba(16,185,129,0.65)':'rgba(239,68,68,0.65)'; ctx.textAlign='center'; ctx.direction='rtl';
     ctx.fillText(p.pos?'▲ نمو سنوي':'▼ تراجع سنوي', lCtr, subY);
   } else {
-    ctx.font=`bold ${f(52)}px JetBrains Mono,monospace`;
+    ctx.font=`bold ${f(52)}px system-ui`;
     ctx.fillStyle=th.t3; ctx.textAlign='center'; ctx.direction='ltr';
     ctx.fillText('لا يوجد بيانات', lCtr, numY);
   }
@@ -3746,7 +3747,7 @@ function drawCardTable(ctx,W,rr,f,th,PAD,tTop,ROW_H,tW,expData,row,fmtN,pctStr,a
 
   // Table header
   rr(PAD,tTop,tW,ROW_H-f(6),f(12),th.colHdr);
-  ctx.font=`700 ${f(28)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`700 ${f(28)}px system-ui`;
   ctx.fillStyle=th.t2;
   ctx.textAlign='right'; ctx.direction='rtl'; ctx.fillText('بيت الخبرة', cN, tTop+f(48));
   ctx.textAlign='center'; ctx.direction='ltr'; ctx.fillText('التوقعات (م.ر)', cV, tTop+f(48));
@@ -3764,20 +3765,20 @@ function drawCardTable(ctx,W,rr,f,th,PAD,tTop,ROW_H,tW,expData,row,fmtN,pctStr,a
       isBest?acColor:null, 1.5);
 
     // Expert name
-    ctx.font=`bold ${f(30)}px Cairo,IBM Plex Sans Arabic,Arial`;
+    ctx.font=`bold ${f(30)}px system-ui`;
     ctx.fillStyle=isBest?acColor:th.t1; ctx.textAlign='right'; ctx.direction='rtl';
     ctx.fillText(e+(isBest?' ⭐':''), cN, ry+f(52));
 
     // Forecast value
     const fvColor = isBest ? acColor : (th.dark===false ? '#1a2a4a' : '#c4cfe8');
-    ctx.font=`bold ${f(36)}px JetBrains Mono,monospace`;
+    ctx.font=`bold ${f(36)}px system-ui`;
     ctx.fillStyle=fvColor; ctx.textAlign='center'; ctx.direction='ltr';
     ctx.fillText(fmtN(fv), cV, ry+f(52));
 
     // Change vs prev quarter
     const p = pctStr(fv, row.prev);
     if(!p){
-      ctx.font=`${f(30)}px JetBrains Mono,monospace`;
+      ctx.font=`${f(30)}px system-ui`;
       ctx.fillStyle=th.t3; ctx.textAlign='center'; ctx.direction='ltr';
       ctx.fillText('—', cD, ry+f(52));
     } else {
@@ -3785,7 +3786,7 @@ function drawCardTable(ctx,W,rr,f,th,PAD,tTop,ROW_H,tW,expData,row,fmtN,pctStr,a
       rr(cD-bw/2,ry+f(20),bw,f(40),f(8),
         p.pos?'rgba(16,185,129,0.15)':'rgba(239,68,68,0.15)',
         p.pos?'rgba(16,185,129,0.4)':'rgba(239,68,68,0.4)',1.5);
-      ctx.font=`bold ${f(28)}px JetBrains Mono,monospace`;
+      ctx.font=`bold ${f(28)}px system-ui`;
       ctx.fillStyle=p.pos?'#10b981':'#ef4444'; ctx.textAlign='center'; ctx.direction='ltr';
       ctx.fillText(p.str, cD, ry+f(52));
     }
@@ -3800,17 +3801,17 @@ function drawCardTable(ctx,W,rr,f,th,PAD,tTop,ROW_H,tW,expData,row,fmtN,pctStr,a
     const avgGrad=ctx.createLinearGradient(PAD,ar,W-PAD,ar+ROW_H);
     avgGrad.addColorStop(0,th.accentSoft+'0.14)'); avgGrad.addColorStop(1,th.accentSoft+'0.04)');
     rr(PAD,ar+f(3),tW,ROW_H-f(6),f(12),avgGrad,th.accentSoft+'0.45)',2);
-    ctx.font=`900 ${f(32)}px Cairo,IBM Plex Sans Arabic,Arial`;
+    ctx.font=`900 ${f(32)}px system-ui`;
     ctx.fillStyle=th.accent; ctx.textAlign='right'; ctx.direction='rtl';
     ctx.fillText('متوسط التوقعات', cN, ar+f(52));
-    ctx.font=`bold ${f(40)}px JetBrains Mono,monospace`;
+    ctx.font=`bold ${f(40)}px system-ui`;
     ctx.fillStyle=th.accent; ctx.textAlign='center'; ctx.direction='ltr';
     ctx.fillText(fmtN(row.avg), cV, ar+f(52));
     const avgP=pctStr(row.avg,row.prev);
     if(avgP){
       const bw=Math.max(f(150),ctx.measureText(avgP.str).width+f(36));
       rr(cD-bw/2,ar+f(20),bw,f(40),f(8),avgP.pos?'rgba(16,185,129,0.18)':'rgba(239,68,68,0.18)',avgP.pos?'rgba(16,185,129,0.5)':'rgba(239,68,68,0.5)',2);
-      ctx.font=`bold ${f(30)}px JetBrains Mono,monospace`;
+      ctx.font=`bold ${f(30)}px system-ui`;
       ctx.fillStyle=avgP.pos?'#10b981':'#ef4444'; ctx.textAlign='center'; ctx.direction='ltr';
       ctx.fillText(avgP.str, cD, ar+f(52));
     }
@@ -3818,10 +3819,10 @@ function drawCardTable(ctx,W,rr,f,th,PAD,tTop,ROW_H,tW,expData,row,fmtN,pctStr,a
 }
 
 function drawCardFooter(ctx,W,H,f,th,PAD) {
-  ctx.font=`${f(26)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(26)}px system-ui`;
   ctx.fillStyle=th.accentSoft+'0.3)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText('لوحة التوقعات المالية • الأسواق السعودية', W/2, H-f(42));
-  ctx.font=`bold ${f(26)}px JetBrains Mono,monospace`;
+  ctx.font=`bold ${f(26)}px system-ui`;
   ctx.fillStyle=th.accentSoft+'0.5)'; ctx.textAlign='left'; ctx.direction='ltr';
   ctx.fillText('@e9sce', PAD+f(10), H-f(42));
 }
@@ -3867,29 +3868,29 @@ function drawResultsLandscape(ctx,W,H,row,sym,sector,qLabel,expData,_bestName,rr
   ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=f(2);
   ctx.beginPath();ctx.moveTo(midX,kTop+f(18));ctx.lineTo(midX,kTop+kH-f(18));ctx.stroke();
   // Right: actual result
-  ctx.font=`${f(30)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(30)}px system-ui`;
   ctx.fillStyle='rgba(139,156,184,0.8)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText('النتيجة الفعلية', rCtr, lbY);
-  ctx.font=`bold ${f(96)}px JetBrains Mono,monospace`;
+  ctx.font=`bold ${f(96)}px system-ui`;
   ctx.fillStyle=acColor; ctx.textAlign='center'; ctx.direction='ltr';
   ctx.fillText(fmtN(row.actual), rCtr, numY);
-  ctx.font=`${f(26)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(26)}px system-ui`;
   ctx.fillStyle=beat?'rgba(16,185,129,0.7)':'rgba(239,68,68,0.7)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText(beat?'✅ فاقت التوقعات':'⚠️ دون التوقعات', rCtr, subY);
   // Left: change vs prev
-  ctx.font=`${f(28)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(28)}px system-ui`;
   ctx.fillStyle='rgba(139,156,184,0.8)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText('التغيير عن الربع المماثل', lCtr, lbY);
   const p=pctStr(row.actual,row.prev);
   if(p){
-    ctx.font=`bold ${f(88)}px JetBrains Mono,monospace`;
+    ctx.font=`bold ${f(88)}px system-ui`;
     ctx.fillStyle=p.pos?'#10b981':'#ef4444'; ctx.textAlign='center'; ctx.direction='ltr';
     ctx.fillText(p.str, lCtr, numY);
-    ctx.font=`${f(24)}px Cairo,IBM Plex Sans Arabic,Arial`;
+    ctx.font=`${f(24)}px system-ui`;
     ctx.fillStyle=p.pos?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'; ctx.textAlign='center'; ctx.direction='rtl';
     ctx.fillText(p.pos?'▲ نمو سنوي':'▼ تراجع سنوي', lCtr, subY);
   } else {
-    ctx.font=`bold ${f(50)}px JetBrains Mono,monospace`;
+    ctx.font=`bold ${f(50)}px system-ui`;
     ctx.fillStyle='#4a5878'; ctx.textAlign='center'; ctx.direction='ltr'; ctx.fillText('—', lCtr, numY);
   }
 
@@ -3935,28 +3936,28 @@ function drawResultsPortrait(ctx,W,H,row,sym,sector,qLabel,expData,_bestName,rr,
   const lbY=kTop+f(40), numY=kTop+kH*0.5+f(30), subY=kTop+kH-f(26);
   ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=f(2);
   ctx.beginPath();ctx.moveTo(midX,kTop+f(16));ctx.lineTo(midX,kTop+kH-f(16));ctx.stroke();
-  ctx.font=`${f(28)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(28)}px system-ui`;
   ctx.fillStyle='rgba(139,156,184,0.8)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText('النتيجة الفعلية', rCtr, lbY);
-  ctx.font=`bold ${f(88)}px JetBrains Mono,monospace`;
+  ctx.font=`bold ${f(88)}px system-ui`;
   ctx.fillStyle=acColor; ctx.textAlign='center'; ctx.direction='ltr';
   ctx.fillText(fmtN(row.actual), rCtr, numY);
-  ctx.font=`${f(24)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(24)}px system-ui`;
   ctx.fillStyle=beat?'rgba(16,185,129,0.7)':'rgba(239,68,68,0.7)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText(beat?'✅ فاقت التوقعات':'⚠️ دون التوقعات', rCtr, subY);
-  ctx.font=`${f(26)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(26)}px system-ui`;
   ctx.fillStyle='rgba(139,156,184,0.8)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText('التغيير عن الربع المماثل', lCtr, lbY);
   const p2=pctStr(row.actual,row.prev);
   if(p2){
-    ctx.font=`bold ${f(82)}px JetBrains Mono,monospace`;
+    ctx.font=`bold ${f(82)}px system-ui`;
     ctx.fillStyle=p2.pos?'#10b981':'#ef4444'; ctx.textAlign='center'; ctx.direction='ltr';
     ctx.fillText(p2.str, lCtr, numY);
-    ctx.font=`${f(22)}px Cairo,IBM Plex Sans Arabic,Arial`;
+    ctx.font=`${f(22)}px system-ui`;
     ctx.fillStyle=p2.pos?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'; ctx.textAlign='center'; ctx.direction='rtl';
     ctx.fillText(p2.pos?'▲ نمو سنوي':'▼ تراجع سنوي', lCtr, subY);
   } else {
-    ctx.font=`bold ${f(46)}px JetBrains Mono,monospace`;
+    ctx.font=`bold ${f(46)}px system-ui`;
     ctx.fillStyle='#4a5878'; ctx.textAlign='center'; ctx.direction='ltr'; ctx.fillText('—', lCtr, numY);
   }
   const tTop=kTop+kH+f(18), ROW_H=f(84), tW=W-PAD*2;
@@ -4000,28 +4001,28 @@ function drawResultsStory(ctx,W,H,row,sym,sector,qLabel,expData,_bestName,rr,fmt
   const lbY=kTop+f(36), numY=kTop+kH*0.5+f(26), subY=kTop+kH-f(22);
   ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=f(1.5);
   ctx.beginPath();ctx.moveTo(midX,kTop+f(14));ctx.lineTo(midX,kTop+kH-f(14));ctx.stroke();
-  ctx.font=`${f(24)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(24)}px system-ui`;
   ctx.fillStyle='rgba(139,156,184,0.8)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText('النتيجة الفعلية', rCtr, lbY);
-  ctx.font=`bold ${f(76)}px JetBrains Mono,monospace`;
+  ctx.font=`bold ${f(76)}px system-ui`;
   ctx.fillStyle=acColor; ctx.textAlign='center'; ctx.direction='ltr';
   ctx.fillText(fmtN(row.actual), rCtr, numY);
-  ctx.font=`${f(20)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(20)}px system-ui`;
   ctx.fillStyle=beat?'rgba(16,185,129,0.7)':'rgba(239,68,68,0.7)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText(beat?'✅ فاقت':'⚠️ دون التوقعات', rCtr, subY);
-  ctx.font=`${f(22)}px Cairo,IBM Plex Sans Arabic,Arial`;
+  ctx.font=`${f(22)}px system-ui`;
   ctx.fillStyle='rgba(139,156,184,0.8)'; ctx.textAlign='center'; ctx.direction='rtl';
   ctx.fillText('التغيير عن الربع المماثل', lCtr, lbY);
   const p2=pctStr(row.actual,row.prev);
   if(p2){
-    ctx.font=`bold ${f(70)}px JetBrains Mono,monospace`;
+    ctx.font=`bold ${f(70)}px system-ui`;
     ctx.fillStyle=p2.pos?'#10b981':'#ef4444'; ctx.textAlign='center'; ctx.direction='ltr';
     ctx.fillText(p2.str, lCtr, numY);
-    ctx.font=`${f(20)}px Cairo,IBM Plex Sans Arabic,Arial`;
+    ctx.font=`${f(20)}px system-ui`;
     ctx.fillStyle=p2.pos?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'; ctx.textAlign='center'; ctx.direction='rtl';
     ctx.fillText(p2.pos?'▲ نمو':'▼ تراجع', lCtr, subY);
   } else {
-    ctx.font=`bold ${f(44)}px JetBrains Mono,monospace`;
+    ctx.font=`bold ${f(44)}px system-ui`;
     ctx.fillStyle='#4a5878'; ctx.textAlign='center'; ctx.direction='ltr'; ctx.fillText('—', lCtr, numY);
   }
   const tTop=kTop+kH+f(12), ROW_H=f(74), tW=W-PAD*2;
