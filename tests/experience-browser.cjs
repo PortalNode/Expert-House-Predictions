@@ -34,8 +34,9 @@ const fs=require('node:fs');
  await separated.reload();
  assert.equal(await separated.locator('#t7').getAttribute('aria-hidden'),'false');
  assert.equal(await separated.evaluate(()=>getPriorActualMap('2026','q3')['مسار']),700);
- assert.equal(await separated.evaluate(()=>getComputedStyle(document.body).fontFamily),'system-ui');
- if(process.platform==='darwin'){
+ assert.equal(await separated.evaluate(()=>getComputedStyle(document.body).fontFamily),'"Alexandria Arabic", system-ui');
+ {
+   await separated.evaluate(()=>document.fonts.ready);
    const cdp=await separated.context().newCDPSession(separated);
    await cdp.send('DOM.enable');await cdp.send('CSS.enable');
    const actualFonts=async selector=>{
@@ -44,10 +45,10 @@ const fs=require('node:fs');
      return (await cdp.send('CSS.getPlatformFontsForNode',{nodeId:node.nodeId})).fonts;
    };
    for(const selector of ['.logo-t','#tTitle','.sc-l']){
-     assert.ok((await actualFonts(selector)).some(font=>font.familyName==='.SF Arabic'),'SF Arabic not rendered in '+selector);
+     assert.ok((await actualFonts(selector)).some(font=>font.familyName==='Alexandria'&&font.isCustomFont),'Alexandria Arabic not rendered in '+selector);
    }
    await separated.click('#globalAdd');
-   assert.ok((await actualFonts('.u-mode button')).some(font=>font.familyName==='.SF Arabic'),'SF Arabic not rendered in input workspace');
+   assert.ok((await actualFonts('.u-mode button')).some(font=>font.familyName==='Alexandria'&&font.isCustomFont),'Alexandria Arabic not rendered in input workspace');
  }
  await separated.close();
  assert.equal(await page.locator('#t1').getAttribute('aria-hidden'),'false');
