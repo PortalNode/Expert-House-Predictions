@@ -1,5 +1,5 @@
 /* Navigation and input feedback. The original data and calculation functions remain authoritative. */
-const sectionRoutes = {t0:'add-forecasts',t1:'results',t2:'research-houses',t3:'accuracy',t5:'company',t6:'announcements',t4:'data'};
+const sectionRoutes = {t0:'add-forecasts',t1:'results',t7:'reported-results',t2:'research-houses',t3:'accuracy',t5:'company',t6:'announcements',t4:'data'};
 let restoringNavigation = false;
 function navigateSection(id) {
   const button = document.querySelector('.tabs .tab[data-tab="'+id+'"]');
