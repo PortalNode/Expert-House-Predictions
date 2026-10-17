@@ -78,7 +78,16 @@
     const query = normalizeArabicLookup($('resultOnlySearch').value.trim()), sector = $('resultOnlySector').value;
     let rows = all.filter(row => (!query || normalizeArabicLookup(row.name).includes(query) || getCompanySymbol(row.name).includes(query)) && (!sector || getCompanySector(row.name) === sector));
     const sort = $('resultOnlySort').value;
-    rows.sort((a,b) => sort === 'actual' ? b.actual-a.actual : sort === 'date' ? savedAnnouncement(b).localeCompare(savedAnnouncement(a)) : a.name.localeCompare(b.name,'ar'));
+    const growth = row => row.prev == null || row.prev === 0 ? null : (row.actual-row.prev)/Math.abs(row.prev);
+    rows.sort((a,b) => {
+      if (sort.startsWith('growth:')) {
+        const first=growth(a), second=growth(b);
+        if (first == null) return second == null ? 0 : 1;
+        if (second == null) return -1;
+        return sort === 'growth:desc' ? second-first : first-second;
+      }
+      return sort === 'actual' ? b.actual-a.actual : sort === 'date' ? savedAnnouncement(b).localeCompare(savedAnnouncement(a)) : a.name.localeCompare(b.name,'ar');
+    });
     $('resultOnlyCount').textContent = 'المعروض '+rows.length+' من '+all.length+' شركة';
     $('resultOnlyRows').innerHTML = rows.map(row => {
       const symbol = getCompanySymbol(row.name), sectorName = getCompanySector(row.name);
@@ -99,8 +108,15 @@
     });
     if (without) renderResultOnly();
   }
+  function updateTableScrollHint() {
+    const scroll = document.querySelector('.results-scroll');
+    $('tableScrollHint').classList.toggle('has-overflow',scroll.clientWidth > 0 && scroll.scrollWidth > scroll.clientWidth + 2);
+  }
+  $('tableScrollForward').addEventListener('click',() => document.querySelector('.results-scroll').scrollBy({left:-320,behavior:'smooth'}));
+  $('tableScrollBack').addEventListener('click',() => document.querySelector('.results-scroll').scrollBy({left:320,behavior:'smooth'}));
+  window.addEventListener('resize',updateTableScrollHint);
   const oldTable = renderTable;
-  renderTable = function () { oldTable(); syncReportedDisplay(); };
+  renderTable = function () { oldTable(); syncReportedDisplay(); requestAnimationFrame(updateTableScrollHint); };
   document.querySelectorAll('[data-reported-group]').forEach(button => button.addEventListener('click', () => {
     window.rasdReportedGroup = button.dataset.reportedGroup;
     renderStats(); renderTable();

@@ -114,8 +114,9 @@
     originalTable();
     const names=[$('srch').value.trim(),$('sectorFilter').value,$('expertFilter').value].filter(Boolean);
     const quick=document.querySelector('.qf-btn[class*="on-"]');if(quick && quick.id!=='qfAll')names.push(quick.textContent);
-    filterSummary.innerHTML=names.length?`<span>التصفية الحالية:</span>${names.map(n=>`<span class="filter-chip">${safe(bidi(n))}</span>`).join('')}<button class="inline-action" id="clearResultFilters">مسح الكل</button>`:'';
-    if($('clearResultFilters'))$('clearResultFilters').onclick=()=>{['srch','sectorFilter','expertFilter'].forEach(id=>$(id).value='');setQF('all');};
+    if($('desktopSort').value)names.push($('desktopSort').selectedOptions[0].textContent);
+    filterSummary.innerHTML=names.length?`<span>التصفية والترتيب:</span>${names.map(n=>`<span class="filter-chip">${safe(bidi(n))}</span>`).join('')}<button class="inline-action" id="clearResultFilters">مسح الكل</button>`:'';
+    if($('clearResultFilters'))$('clearResultFilters').onclick=()=>{['srch','sectorFilter','expertFilter'].forEach(id=>$(id).value='');$('desktopSort').value='';setDesktopSort('');setQF('all');};
   };
   document.addEventListener('click',event=>{
     const company=event.target.closest('[data-company-open]');

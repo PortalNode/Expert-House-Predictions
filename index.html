@@ -768,11 +768,12 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
     <button class="qf-btn" id="qfMiss" onclick="setQF('miss')" title="الشركات التي جاءت دون توقعات المحللين">دون التوقعات</button>
     <button class="qf-btn" id="qfUp"   onclick="setQF('up')"   title="الشركات المتوقع ارتفاع أرباحها عن المماثل">متوقع ارتفاع</button>
     <button class="qf-btn" id="qfDown" onclick="setQF('down')" title="الشركات المتوقع انخفاض أرباحها عن المماثل">متوقع انخفاض</button>
-    <button class="qf-btn" id="qfAnnounced" onclick="setQF('announced')" title="الشركات التي أضيفت نتائجها الفعلية لهذا الربع" hidden>أعلنت</button>
+    <button class="qf-btn" id="qfAnnounced" onclick="setQF('announced')" title="الشركات ذات التوقعات التي أضيفت نتائجها الفعلية لهذا الربع">أعلنت</button>
     <button class="qf-btn" id="qfPending" onclick="setQF('pending')" title="الشركات التي لم تُضف نتائجها الفعلية بعد">لم تعلن</button>
+    <button class="qf-btn" id="qfComparable" onclick="setQF('comparable')" title="شركات لها توقع ونتيجة فعلية وربح الربع المماثل، فتظهر نسب المقارنة الثلاث">مقارنة مكتملة</button>
     <button class="qf-btn" id="qfAll"  onclick="setQF('all')">إلغاء التصفية</button>
    </div>
-   <div class="scroll-hint" aria-hidden="true">مرّر أفقيًا لرؤية بقية الأعمدة — يبقى اسم الشركة مثبتًا.</div>
+   <div class="scroll-hint" id="tableScrollHint"><span>كل نسب المقارنة موجودة في الجدول. حرّكه أفقيًا لرؤية بقية الأعمدة؛ يبقى اسم الشركة ثابتًا.</span><div><button type="button" id="tableScrollForward" aria-label="عرض الأعمدة التالية">الأعمدة التالية ←</button><button type="button" id="tableScrollBack" aria-label="العودة إلى الأعمدة السابقة">السابقة →</button></div></div>
    <div class="ts results-scroll" tabindex="0" aria-label="جدول الشركات، قابل للتمرير أفقيًا"><table class="results-table"><thead><tr id="thead"></tr></thead><tbody id="tbody"></tbody></table></div>
   </div></div>
  </div>
@@ -792,7 +793,7 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
   <div id="announcedWorkspace"></div>
  <div class="tw rasd-result-only" id="resultOnlyPanel" hidden>
   <div class="rasd-result-only-head"><div><h2>نتائج بلا توقعات</h2><p>القيم الفعلية والمماثلة فقط؛ لا تظهر مؤشرات دقة أو فرق عن توقع غير موجود.</p></div><button type="button" class="btn bo" id="resultOnlyClear">مسح المرشحات</button></div>
-  <div class="rasd-result-only-filters"><label>الشركة أو الرمز<input class="sb" id="resultOnlySearch" type="search" placeholder="ابحث في النتائج..."></label><label>القطاع<select class="fsel" id="resultOnlySector"><option value="">كل القطاعات</option></select></label><label>الترتيب<select class="fsel" id="resultOnlySort"><option value="name">اسم الشركة</option><option value="actual">أعلى نتيجة</option><option value="date">أحدث إعلان</option></select></label><span id="resultOnlyCount" role="status"></span></div>
+  <div class="rasd-result-only-filters"><label>الشركة أو الرمز<input class="sb" id="resultOnlySearch" type="search" placeholder="ابحث في النتائج..."></label><label>القطاع<select class="fsel" id="resultOnlySector"><option value="">كل القطاعات</option></select></label><label>الترتيب<select class="fsel" id="resultOnlySort"><option value="name">اسم الشركة</option><option value="actual">أعلى نتيجة</option><option value="growth:desc">التغير عن المماثل: الأعلى</option><option value="growth:asc">التغير عن المماثل: الأدنى</option><option value="date">أحدث إعلان</option></select></label><span id="resultOnlyCount" role="status"></span></div>
   <div class="ts"><table class="rasd-result-only-table"><thead><tr><th>الشركة</th><th>القطاع</th><th>النتيجة الفعلية</th><th>الربع المماثل</th><th>التغير عن المماثل</th><th>تاريخ الإعلان</th><th></th></tr></thead><tbody id="resultOnlyRows"></tbody></table></div>
  </div>
  </div>
@@ -1558,12 +1559,12 @@ let _tableRows = [];
 // Sort states
 let _sortMode  = 'none';
 // Quick filter
-let _quickFilter = 'all'; // 'all','beat','miss','up','down','announced','pending'
+let _quickFilter = 'all'; // 'all','beat','miss','up','down','announced','pending','comparable'
 
 function setQF(mode) {
   _quickFilter = (_quickFilter === mode) ? 'all' : mode;
   // Update button styles
-  ['Beat','Miss','Up','Down','Announced','Pending','All'].forEach(k => {
+  ['Beat','Miss','Up','Down','Announced','Pending','Comparable','All'].forEach(k => {
     const btn = document.getElementById('qf'+k);
     if (!btn) return;
     btn.className = 'qf-btn';
@@ -1575,6 +1576,7 @@ function setQF(mode) {
 function matchesQuickFilter(row,mode){
   if(mode==='announced')return row.actual!=null;
   if(mode==='pending')return row.actual==null;
+  if(mode==='comparable')return row.actual!=null&&row.avg!=null&&row.avg!==0&&row.prev!=null&&row.prev!==0;
   if(mode==='beat')return row.actual!=null&&row.avg!=null&&row.actual>row.avg;
   if(mode==='miss')return row.actual!=null&&row.avg!=null&&row.actual<row.avg;
   if(mode==='up')return row.avg!=null&&row.prev!=null&&row.prev!==0&&row.avg>row.prev;
@@ -1717,7 +1719,7 @@ function renderTable() {
 
   _tableRows = fl; // store for index-based onclick
 
-  const qfLabels = {beat:'فاقت التوقعات',miss:'دون التوقعات',up:'متوقع ارتفاع',down:'متوقع انخفاض',announced:'أعلنت',pending:'لم تعلن'};
+  const qfLabels = {beat:'فاقت التوقعات',miss:'دون التوقعات',up:'متوقع ارتفاع',down:'متوقع انخفاض',announced:'أعلنت',pending:'لم تعلن',comparable:'مقارنة مكتملة'};
   const qfSuffix = _quickFilter !== 'all' ? ' ← ' + qfLabels[_quickFilter] : '';
   document.getElementById('tTitle').textContent =
     (S.tab === 't7' ? 'الشركات المعلنة' : 'الشركات ذات التوقعات') + ' — ' + QL[S.qr] + ' ' + S.yr + ' — ' + fl.length + ' شركة' + qfSuffix;
@@ -2737,7 +2739,7 @@ function swTab(id, btn) {
       _quickFilter = 'all';
       document.querySelectorAll('.qf-btn').forEach(b => b.className = 'qf-btn');
     }
-    document.getElementById('qfAnnounced').hidden = true;
+    document.getElementById('qfAnnounced').hidden = id === 't7';
     document.getElementById('qfPending').hidden = id === 't7';
   }
   document.querySelectorAll('.main>.tc').forEach(t=>{t.classList.remove('on');t.setAttribute('aria-hidden','true');});
