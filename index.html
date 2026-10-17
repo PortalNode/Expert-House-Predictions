@@ -487,6 +487,7 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
 <link rel="stylesheet" href="assets/interface.css">
 <link rel="stylesheet" href="assets/unified-workspace.css">
 <link rel="stylesheet" href="assets/experience.css">
+<link rel="stylesheet" href="assets/desktop-redesign.css">
 </head>
 <body>
 <a class="skip-link" href="#mainContent">انتقل إلى المحتوى</a>
@@ -654,9 +655,31 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
  </div>
 </div>
 
+<!-- DESKTOP WORKSPACE -->
+<div class="rasd-shell">
+<aside class="rasd-sidebar" aria-label="التنقل الرئيسي">
+ <div class="rasd-brand"><span class="rasd-brand-mark" aria-hidden="true">ر</span><span><strong>رَصد الأرباح</strong><small>توقعات بيوت الخبرة • السوق السعودي</small></span></div>
+ <div class="rasd-nav-label">الاستكشاف</div>
+ <nav class="rasd-side-nav" aria-label="أقسام الموقع">
+  <button type="button" data-side-section="t1"><span aria-hidden="true">▤</span>الشركات ذات التوقعات</button>
+  <button type="button" data-side-section="t7"><span aria-hidden="true">◫</span>النتائج المعلنة</button>
+  <button type="button" data-side-section="t6"><span aria-hidden="true">▦</span>مواعيد الإعلانات</button>
+  <button type="button" data-side-section="t2"><span aria-hidden="true">◇</span>بيوت الخبرة</button>
+  <button type="button" data-side-section="t3"><span aria-hidden="true">◉</span>دقة التوقعات</button>
+  <button type="button" data-side-section="t5"><span aria-hidden="true">▣</span>ملف الشركة</button>
+ </nav>
+ <div class="rasd-nav-label">إدارة البيانات</div>
+ <nav class="rasd-side-nav" aria-label="إدارة البيانات">
+  <button type="button" data-side-section="t0"><span aria-hidden="true">＋</span>إضافة بيانات</button>
+  <button type="button" data-side-section="t4"><span aria-hidden="true">⚙</span>الإعدادات والنسخ</button>
+ </nav>
+ <p class="rasd-side-note">تظهر النتائج بلا توقعات في قائمة مستقلة، مع إبقاء المرشحات المناسبة لكل قسم.</p>
+</aside>
+<div class="rasd-page">
 <!-- HEADER -->
 <header class="hdr">
  <div class="hdr-accent"></div>
+ <div class="rasd-crumb">رصد الأرباح <span aria-hidden="true">/</span> <strong id="desktopSectionName">الشركات ذات التوقعات</strong></div>
  <div class="hdr-i">
   <div class="logo">
    <div class="logo-ic">
@@ -668,6 +691,7 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
    <div><div class="logo-t">رَصد الأرباح</div><div class="logo-s">توقعات بيوت الخبرة • السوق السعودي</div></div>
   </div>
   <div class="header-actions">
+   <input class="sb rasd-global-search" id="desktopCompanySearch" type="search" placeholder="ابحث عن شركة وانتقل لملفها" aria-label="البحث العام عن شركة">
    <button class="btn bg" onclick="goToPaste()" id="globalAdd"><span aria-hidden="true">＋</span> إضافة بيانات</button>
    <button class="btn bo" onclick="navigateSection('t4')" id="settingsButton" aria-label="الإعدادات والمظهر">⚙ <span>الإعدادات</span></button>
   </div>
@@ -733,6 +757,9 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
        <option value="">كل بيوت الخبرة</option>
       </select>
      </div>
+     <div class="sw"><select id="desktopSort" onchange="setDesktopSort(this.value)" aria-label="ترتيب الشركات">
+      <option value="">الترتيب الافتراضي</option><option value="prev:desc">نمو التوقعات: الأعلى</option><option value="prev:asc">نمو التوقعات: الأدنى</option><option value="act:desc">نمو الفعلي: الأعلى</option><option value="act:asc">نمو الفعلي: الأدنى</option><option value="cvf:desc">النتيجة مقابل التوقع: الأعلى</option><option value="cvf:asc">النتيجة مقابل التوقع: الأدنى</option><option value="ann:desc">الإعلان: الأحدث</option><option value="ann:asc">الإعلان: الأقدم</option>
+     </select></div>
     </div>
    </div>
    <div class="quick-filter-bar" style="display:flex;gap:7px;flex-wrap:wrap;padding:10px 19px 0;border-top:1px solid var(--b1)">
@@ -758,7 +785,16 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
     <button class="btn bb" onclick="goToArgaamResults()" style="padding:10px 16px">استيراد نتائج أرقام</button>
    </div>
   </section>
+ <div class="rasd-result-groups" id="reportedGroups" role="group" aria-label="نوع النتائج المعلنة">
+  <button type="button" class="rasd-result-group is-active" data-reported-group="with" aria-pressed="true"><span><strong>أُعلنت ولها توقعات</strong><small>نتيجة فعلية ومتوسط توقعات صالح للمقارنة</small></span><b id="reportedWithCount">0</b></button>
+  <button type="button" class="rasd-result-group" data-reported-group="without" aria-pressed="false"><span><strong>أُعلنت بلا توقعات</strong><small>نتيجة فعلية مستقلة دون مقارنة متخيلة</small></span><b id="reportedWithoutCount">0</b></button>
+ </div>
   <div id="announcedWorkspace"></div>
+ <div class="tw rasd-result-only" id="resultOnlyPanel" hidden>
+  <div class="rasd-result-only-head"><div><h2>نتائج بلا توقعات</h2><p>القيم الفعلية والمماثلة فقط؛ لا تظهر مؤشرات دقة أو فرق عن توقع غير موجود.</p></div><button type="button" class="btn bo" id="resultOnlyClear">مسح المرشحات</button></div>
+  <div class="rasd-result-only-filters"><label>الشركة أو الرمز<input class="sb" id="resultOnlySearch" type="search" placeholder="ابحث في النتائج..."></label><label>القطاع<select class="fsel" id="resultOnlySector"><option value="">كل القطاعات</option></select></label><label>الترتيب<select class="fsel" id="resultOnlySort"><option value="name">اسم الشركة</option><option value="actual">أعلى نتيجة</option><option value="date">أحدث إعلان</option></select></label><span id="resultOnlyCount" role="status"></span></div>
+  <div class="ts"><table class="rasd-result-only-table"><thead><tr><th>الشركة</th><th>القطاع</th><th>النتيجة الفعلية</th><th>الربع المماثل</th><th>التغير عن المماثل</th><th>تاريخ الإعلان</th><th></th></tr></thead><tbody id="resultOnlyRows"></tbody></table></div>
+ </div>
  </div>
 
  <div id="t2" class="tc" role="tabpanel" aria-hidden="true">
@@ -780,17 +816,18 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
  </div>
 
  <div id="t3" class="tc" role="tabpanel" aria-hidden="true">
+  <div class="page-heading"><div><h1>دقة التوقعات</h1><p>قارن دقة بيوت الخبرة حسب السنة، وابحث عن الشركة لرؤية أدق توقعاتها.</p></div></div>
   <div class="lb-g">
    <div class="tw">
-    <div class="th"><span class="tt">دقة التوقعات لكل شركة — 2025</span><input class="sb" id="lbSrch" placeholder="ابحث..." oninput="renderLB()" aria-label="البحث في دقة الشركات"></div>
+    <div class="th"><span class="tt" id="accuracyTitle">دقة التوقعات لكل شركة — 2025</span><div class="rasd-accuracy-controls"><select class="fsel" id="lbYear" onchange="renderLB()" aria-label="سنة تحليل الدقة"><option value="2025">سنة 2025</option><option value="2026">سنة 2026</option></select><input class="sb" id="lbSrch" placeholder="ابحث عن شركة..." oninput="renderLB()" aria-label="البحث في دقة الشركات"></div></div>
     <div class="ts">
      <table>
-      <thead><tr><th>اسم الشركة</th><th>الأدق ر1</th><th>الأدق ر2</th><th>الأدق ر3</th><th>الأدق ر4</th><th>الفائز الإجمالي</th></tr></thead>
+      <thead><tr id="lbHead"><th>اسم الشركة</th><th>الأدق ر1</th><th>الأدق ر2</th><th>الأدق ر3</th><th>الأدق ر4</th><th>الفائز الإجمالي</th></tr></thead>
       <tbody id="lbBody"></tbody>
      </table>
     </div>
    </div>
-   <div class="lb-side"><div class="lb-sh">ترتيب بيوت الخبرة 2025</div><div id="expRank"></div></div>
+   <div class="lb-side"><div class="lb-sh" id="accuracyRankTitle">ترتيب بيوت الخبرة 2025</div><div id="expRank"></div></div>
   </div>
  </div>
 
@@ -954,6 +991,8 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
  </div>
 
 </main>
+</div>
+</div>
 
 <script src="assets/announcement-history.js"></script>
 <script src="assets/announcement-updates.js"></script>
@@ -1484,6 +1523,17 @@ function cycleSort(which) {
   else if (which==='act') { _sortMode='none'; _sortCvf='none'; _sortAnn='none'; _sortAct=next(_sortAct); }
   else if (which==='cvf') { _sortMode='none'; _sortAct='none'; _sortAnn='none'; _sortCvf=next(_sortCvf); }
   else if (which==='ann') { _sortMode='none'; _sortAct='none'; _sortCvf='none'; _sortAnn=next(_sortAnn); }
+  const active = [['prev',_sortMode],['act',_sortAct],['cvf',_sortCvf],['ann',_sortAnn]].find(([,mode]) => mode !== 'none');
+  document.getElementById('desktopSort').value = active ? active.join(':') : '';
+  renderHeader();
+  renderTable();
+}
+function setDesktopSort(value) {
+  const [which,mode] = value ? value.split(':') : [];
+  _sortMode = which === 'prev' ? mode : 'none';
+  _sortAct = which === 'act' ? mode : 'none';
+  _sortCvf = which === 'cvf' ? mode : 'none';
+  _sortAnn = which === 'ann' ? mode : 'none';
   renderHeader();
   renderTable();
 }
@@ -1603,8 +1653,14 @@ function populateFilters(data) {
   }
 }
 
+function hasNumericForecast(row) {
+  return Object.values(row.forecasts || {}).some(value => typeof value === 'number' && Number.isFinite(value));
+}
+
 function renderTable() {
-  const d = getData().filter(r => S.tab === 't7' ? r.actual != null : r.avg != null);
+  const d = getData().filter(r => S.tab === 't7'
+    ? r.actual != null && (window.rasdReportedGroup === 'without' ? !hasNumericForecast(r) : hasNumericForecast(r))
+    : hasNumericForecast(r));
   const q       = document.getElementById('srch').value.trim();
   const secF    = (document.getElementById('sectorFilter')  || {value:''}).value;
   const expF    = (document.getElementById('expertFilter')  || {value:''}).value;
@@ -2141,7 +2197,10 @@ function getPeriodData(yr, qr) {
 
 function renderLB() {
   const q = document.getElementById('lbSrch').value.trim();
-  const periods = getAllDataPeriods();
+  const selectedYear = document.getElementById('lbYear')?.value || '2025';
+  const periods = getAllDataPeriods().filter(period => period.yr === selectedYear);
+  document.getElementById('accuracyTitle').textContent = 'دقة التوقعات لكل شركة — ' + selectedYear;
+  document.getElementById('accuracyRankTitle').textContent = 'ترتيب بيوت الخبرة ' + selectedYear;
   const QN = {q1:'Q1',q2:'Q2',q3:'Q3',q4:'Q4'};
 
   // Collect all companies with actuals across periods
@@ -4072,5 +4131,6 @@ document.addEventListener('keydown',e=>{
 <script src="assets/research-houses.js"></script>
 <script src="assets/unified-workspace.js"></script>
 <script src="assets/experience.js"></script>
+<script src="assets/desktop-redesign.js"></script>
 </body>
 </html>
