@@ -76,8 +76,22 @@
     if (sectors.includes(current)) select.value = current;
   }
   function syncColumnSorts(sort) {
-    $('resultGrowthOrder').value = sort.startsWith('growth:') ? sort.split(':')[1] : '';
-    $('resultDateOrder').value = sort.startsWith('date:') ? sort.split(':')[1] : '';
+    for (const [kind,buttonId,headingId,label] of [
+      ['growth','resultGrowthOrder','resultGrowthHeading','التغير عن المماثل'],
+      ['date','resultDateOrder','resultDateHeading','تاريخ الإعلان']
+    ]) {
+      const order = sort.startsWith(kind+':') ? sort.split(':')[1] : '';
+      const button = $(buttonId);
+      button.dataset.order = order;
+      button.querySelector('.result-sort-icon').textContent = order === 'asc' ? '↑' : order === 'desc' ? '↓' : '↕';
+      button.setAttribute('aria-label',label+' — '+(order === 'asc' ? 'تصاعدي، اضغط للترتيب تنازليًا' : order === 'desc' ? 'تنازلي، اضغط للترتيب الافتراضي' : 'افتراضي، اضغط للترتيب تصاعديًا'));
+      $(headingId).setAttribute('aria-sort',order === 'asc' ? 'ascending' : order === 'desc' ? 'descending' : 'none');
+    }
+  }
+  function cycleColumnSort(kind) {
+    const current = $('resultOnlySort').value;
+    $('resultOnlySort').value = current === kind+':asc' ? kind+':desc' : current === kind+':desc' ? 'name' : kind+':asc';
+    renderReportedResults();
   }
   function renderReportedResults() {
     const all = reportedRows();
@@ -124,8 +138,8 @@
   $('resultOnlySearch').addEventListener('input',renderReportedResults);
   $('resultOnlySector').addEventListener('change',renderReportedResults);
   $('resultOnlySort').addEventListener('change',renderReportedResults);
-  $('resultGrowthOrder').addEventListener('change',event => { $('resultOnlySort').value = event.target.value ? 'growth:'+event.target.value : 'name'; renderReportedResults(); });
-  $('resultDateOrder').addEventListener('change',event => { $('resultOnlySort').value = event.target.value ? 'date:'+event.target.value : 'name'; renderReportedResults(); });
+  $('resultGrowthOrder').addEventListener('click',() => cycleColumnSort('growth'));
+  $('resultDateOrder').addEventListener('click',() => cycleColumnSort('date'));
   $('resultOnlyClear').addEventListener('click',() => { $('resultOnlySearch').value=''; $('resultOnlySector').value=''; $('resultOnlySort').value='name'; renderReportedResults(); });
   $('resultOnlyRows').addEventListener('click',event => {
     const edit = event.target.closest('.result-only-edit-act');
