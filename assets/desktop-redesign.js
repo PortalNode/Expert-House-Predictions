@@ -75,20 +75,33 @@
     select.replaceChildren(new Option('كل القطاعات',''), ...sectors.map(sector => new Option(sector,sector)));
     if (sectors.includes(current)) select.value = current;
   }
+  function syncColumnSorts(sort) {
+    $('resultGrowthOrder').value = sort.startsWith('growth:') ? sort.split(':')[1] : '';
+    $('resultDateOrder').value = sort.startsWith('date:') ? sort.split(':')[1] : '';
+  }
   function renderReportedResults() {
     const all = reportedRows();
     updateSectorChoices(all);
     const query = normalizeArabicLookup($('resultOnlySearch').value.trim()), sector = $('resultOnlySector').value;
     let rows = all.filter(row => (!query || normalizeArabicLookup(row.name).includes(query) || String(getCompanySymbol(row.name) || '').includes(query)) && (!sector || getCompanySector(row.name) === sector));
     const sort = $('resultOnlySort').value;
+    syncColumnSorts(sort);
     rows.sort((a,b) => {
       if (sort.startsWith('growth:')) {
         const first=growth(a), second=growth(b);
-        if (first == null) return second == null ? 0 : 1;
+        if (first == null) return second == null ? a.name.localeCompare(b.name,'ar') : 1;
         if (second == null) return -1;
-        return sort === 'growth:desc' ? second-first : first-second;
+        const difference = sort === 'growth:desc' ? second-first : first-second;
+        return difference || a.name.localeCompare(b.name,'ar');
       }
-      return sort === 'actual' ? b.actual-a.actual : sort === 'date' ? savedAnnouncement(b).localeCompare(savedAnnouncement(a)) : a.name.localeCompare(b.name,'ar');
+      if (sort.startsWith('date:')) {
+        const first=savedAnnouncement(a), second=savedAnnouncement(b);
+        if (!first) return second ? 1 : a.name.localeCompare(b.name,'ar');
+        if (!second) return -1;
+        const difference = sort === 'date:desc' ? second.localeCompare(first) : first.localeCompare(second);
+        return difference || a.name.localeCompare(b.name,'ar');
+      }
+      return sort === 'actual' ? b.actual-a.actual || a.name.localeCompare(b.name,'ar') : a.name.localeCompare(b.name,'ar');
     });
     $('resultOnlyCount').textContent = 'المعروض '+rows.length+' من '+all.length+' شركة';
     $('resultOnlyRows').innerHTML = rows.map(row => {
@@ -111,6 +124,8 @@
   $('resultOnlySearch').addEventListener('input',renderReportedResults);
   $('resultOnlySector').addEventListener('change',renderReportedResults);
   $('resultOnlySort').addEventListener('change',renderReportedResults);
+  $('resultGrowthOrder').addEventListener('change',event => { $('resultOnlySort').value = event.target.value ? 'growth:'+event.target.value : 'name'; renderReportedResults(); });
+  $('resultDateOrder').addEventListener('change',event => { $('resultOnlySort').value = event.target.value ? 'date:'+event.target.value : 'name'; renderReportedResults(); });
   $('resultOnlyClear').addEventListener('click',() => { $('resultOnlySearch').value=''; $('resultOnlySector').value=''; $('resultOnlySort').value='name'; renderReportedResults(); });
   $('resultOnlyRows').addEventListener('click',event => {
     const edit = event.target.closest('.result-only-edit-act');

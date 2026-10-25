@@ -487,7 +487,7 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
 <link rel="stylesheet" href="assets/interface.css?v=20261025-2">
 <link rel="stylesheet" href="assets/unified-workspace.css?v=20261025-2">
 <link rel="stylesheet" href="assets/experience.css?v=20261025-2">
-<link rel="stylesheet" href="assets/desktop-redesign.css?v=20261025-2">
+<link rel="stylesheet" href="assets/desktop-redesign.css?v=20261025-3">
 </head>
 <body>
 <a class="skip-link" href="#mainContent">انتقل إلى المحتوى</a>
@@ -789,9 +789,9 @@ body{letter-spacing:0;-webkit-font-smoothing:antialiased;text-rendering:optimize
  <div class="stats" id="reportedStats"></div>
  <div class="tw rasd-result-only" id="resultOnlyPanel">
   <div class="rasd-result-only-head"><div><h2>جميع الشركات المعلنة</h2><p>النتيجة الفعلية والربع المماثل ونسبة التغيير لكل شركة سُجلت نتيجتها.</p></div><button type="button" class="btn bo" id="resultOnlyClear">مسح المرشحات</button></div>
-  <div class="rasd-result-only-filters"><label>الشركة أو الرمز<input class="sb" id="resultOnlySearch" type="search" placeholder="ابحث في النتائج..."></label><label>القطاع<select class="fsel" id="resultOnlySector"><option value="">كل القطاعات</option></select></label><label>الترتيب<select class="fsel" id="resultOnlySort"><option value="name">اسم الشركة</option><option value="actual">أعلى نتيجة</option><option value="growth:desc">التغير عن المماثل: الأعلى</option><option value="growth:asc">التغير عن المماثل: الأدنى</option><option value="date">أحدث إعلان</option></select></label><span id="resultOnlyCount" role="status"></span></div>
+  <div class="rasd-result-only-filters"><label>الشركة أو الرمز<input class="sb" id="resultOnlySearch" type="search" placeholder="ابحث في النتائج..."></label><label>القطاع<select class="fsel" id="resultOnlySector"><option value="">كل القطاعات</option></select></label><label>الترتيب<select class="fsel" id="resultOnlySort"><option value="name">الافتراضي: اسم الشركة</option><option value="actual">أعلى نتيجة</option><option value="growth:asc">التغير: تصاعدي</option><option value="growth:desc">التغير: تنازلي</option><option value="date:asc">الإعلان: تصاعدي</option><option value="date:desc">الإعلان: تنازلي</option></select></label><span id="resultOnlyCount" role="status"></span></div>
   <p class="reported-scroll-hint">مرّر الجدول أفقيًا لرؤية الربع المماثل ونسبة التغيير وتاريخ الإعلان.</p>
-  <div class="ts"><table class="rasd-result-only-table"><thead><tr><th>الشركة</th><th>القطاع</th><th>النتيجة الفعلية</th><th>الربع المماثل</th><th>التغير عن المماثل</th><th>تاريخ الإعلان</th><th></th></tr></thead><tbody id="resultOnlyRows"></tbody></table></div>
+  <div class="ts"><table class="rasd-result-only-table"><thead><tr><th>الشركة</th><th>القطاع</th><th>النتيجة الفعلية</th><th>الربع المماثل</th><th><label class="result-column-sort">التغير عن المماثل<select id="resultGrowthOrder" aria-label="ترتيب التغير عن المماثل"><option value="">الافتراضي</option><option value="asc">تصاعدي</option><option value="desc">تنازلي</option></select></label></th><th><label class="result-column-sort">تاريخ الإعلان<select id="resultDateOrder" aria-label="ترتيب تاريخ الإعلان"><option value="">الافتراضي</option><option value="asc">تصاعدي: الأقدم أولًا</option><option value="desc">تنازلي: الأحدث أولًا</option></select></label></th><th></th></tr></thead><tbody id="resultOnlyRows"></tbody></table></div>
  </div>
  </div>
 
@@ -4122,6 +4122,6 @@ document.addEventListener('keydown',e=>{
 <script src="assets/research-houses.js"></script>
 <script src="assets/unified-workspace.js?v=20261025-2"></script>
 <script src="assets/experience.js?v=20261025-2"></script>
-<script src="assets/desktop-redesign.js?v=20261025-2"></script>
+<script src="assets/desktop-redesign.js?v=20261025-3"></script>
 </body>
 </html>
