@@ -1,5 +1,6 @@
 /* Navigation and input feedback. The original data and calculation functions remain authoritative. */
-const sectionRoutes = {t0:'add-forecasts',t1:'results',t7:'reported-results',t2:'research-houses',t3:'accuracy',t5:'company',t6:'announcements',t4:'data'};
+const sectionRoutes = {t0:'add-forecasts',t1:'forecasts',t7:'results',t2:'research-houses',t3:'accuracy',t5:'company',t6:'announcements',t4:'data'};
+const legacySectionRoutes = {'reported-results':'t7'};
 let restoringNavigation = false;
 function navigateSection(id) {
   const button = document.querySelector('.tabs .tab[data-tab="'+id+'"]');
@@ -13,9 +14,11 @@ function syncNavigation(id) {
   window.scrollTo({top:0,behavior:'instant'});
 }
 function restoreSectionFromURL() {
-  const id = Object.keys(sectionRoutes).find(key => sectionRoutes[key] === location.hash.slice(1)) || 't1';
+  const hash = location.hash.slice(1);
+  const id = legacySectionRoutes[hash] || Object.keys(sectionRoutes).find(key => sectionRoutes[key] === hash) || 't7';
   restoringNavigation=true;
   try {navigateSection(id);} finally {restoringNavigation=false;}
+  if (legacySectionRoutes[hash]) history.replaceState(null, '', '#'+sectionRoutes[id]);
 }
 function setPasteError(message) {
   const error = document.getElementById('pasteError'), input = document.getElementById('aiTxt');
@@ -129,6 +132,6 @@ new MutationObserver(()=>{
   if(result.classList.contains('on')) result.focus({preventScroll:false});
 }).observe(document.getElementById('aiCont'),{childList:true});
 window.addEventListener('popstate',restoreSectionFromURL);
-if(Object.values(sectionRoutes).includes(location.hash.slice(1))) restoreSectionFromURL();
+if(Object.values(sectionRoutes).includes(location.hash.slice(1)) || legacySectionRoutes[location.hash.slice(1)]) restoreSectionFromURL();
 updatePasteCount();
 renderExpertCoverage();

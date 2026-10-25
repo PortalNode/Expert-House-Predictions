@@ -100,6 +100,10 @@ const assert = require("node:assert/strict");
       .evaluateAll((es) => es.map((e) => e.value)),
   );
   assert.equal(await page.locator("#uReview [data-review]").count(), 8);
+  // The published dataset already contains these results; change one value to
+  // exercise replacement and undo without relying on an empty baseline.
+  await page.locator('#uReview [data-field="value"]').first().fill('4.01');
+  await page.selectOption('#uPolicy','replace');
   await page.click("#uCommit");
   assert.equal(await page.locator(".u-success").count(), 1);
   await page.click("#uViewCalendar");
@@ -160,7 +164,7 @@ const assert = require("node:assert/strict");
     await page.evaluate(
       () => S.extra["2026_q3"].find((r) => r.name === "المتقدمة").actual,
     ),
-    null,
+    4,
   );
   assert.equal(
     await page.evaluate(
@@ -281,7 +285,7 @@ const assert = require("node:assert/strict");
       S.announcements["تسهيل"]["2026_q3"],
       JSON.parse(localStorage.getItem("finUnifiedV1")).seedVersion,
     ]),
-    ["2026-10-11", "2026-07-12", "2026-10-09", "2026-10-08", 4],
+    ["2026-10-11", "2026-07-12", "2026-10-09", "2026-10-08", 5],
   );
   await previousRelease.close();
   const previousPreliminary = await browser.newPage();
@@ -300,7 +304,7 @@ const assert = require("node:assert/strict");
     S.announcements["المجموعة السعودية"]["2025_q4"],
     S.announcements["أسواق ع العثيم"]["2024_q4"],
     JSON.parse(localStorage.getItem("finUnifiedV1")).seedVersion,
-  ]), ["2026-02-05", "2025-03-26", 4]);
+  ]), ["2026-02-05", "2025-03-26", 5]);
   await previousPreliminary.close();
   await browser.close();
 })().catch((e) => {

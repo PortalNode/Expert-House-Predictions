@@ -28,7 +28,7 @@
   try {initial=localStorage.getItem('rasdPaletteV1') || (localStorage.getItem('themeV2')==='dark'?'night':'navy');} catch {}
   chooseTheme(initial,false);
   settings.querySelectorAll('[data-palette-choice]').forEach(b=>b.onclick=()=>chooseTheme(b.dataset.paletteChoice));
-  document.querySelectorAll('[data-return-results]').forEach(b=>b.onclick=()=>navigateSection('t1'));
+  document.querySelectorAll('[data-return-results]').forEach(b=>b.onclick=()=>navigateSection('t7'));
 
   const intro = document.createElement('section');
   intro.className='page-heading house-heading';
@@ -123,7 +123,7 @@
     if(company){navigateSection('t5');$('t5co').value=company.dataset.companyOpen;$('t5yr').value=S.yr;$('t5qr').value=S.qr;renderCompanyView();}
   });
   ['t0','t5'].forEach(id=>{
-    const back=document.createElement('button');back.className='back-link';back.textContent='→ العودة للتوقعات والنتائج';back.onclick=()=>navigateSection('t1');$(id).prepend(back);
+    const back=document.createElement('button');back.className='back-link';back.textContent='→ العودة للنتائج';back.onclick=()=>navigateSection('t7');$(id).prepend(back);
   });
   const heading=document.querySelector('#t0 .hero-title');if(heading)heading.textContent='أضف بياناتك في خطوات واضحة';
   const resetCalendar=document.createElement('button');resetCalendar.className='btn bo';resetCalendar.textContent='مسح التصفية';resetCalendar.id='clearCalendarFilters';

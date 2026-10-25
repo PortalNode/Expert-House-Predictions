@@ -22,21 +22,23 @@ const fs=require('node:fs');
  await separated.selectOption('#ySel','2025');
  await separated.selectOption('#qSel','q3');
  const screenshotNames=['المجموعة السعودية','لوبريف','ساسكو','مياهنا','إنتاج','المطاحن الأولى','الآمار','جاز','شري','العقارية','مسار','سماسكو'];
- const forecastNames=await separated.locator('#tbody [data-company-open]').evaluateAll(els=>els.map(el=>el.textContent));
- for(const name of screenshotNames)assert.ok(!forecastNames.includes(name),'result-only company in forecast page: '+name);
- await separated.click('[data-tab="t7"]');
- assert.equal(new URL(separated.url()).hash,'#reported-results');
- const comparisonNames=await separated.locator('#tbody [data-company-open]').evaluateAll(els=>els.map(el=>el.textContent));
- for(const name of screenshotNames)assert.ok(!comparisonNames.includes(name),'result without forecast in comparison table: '+name);
- await separated.click('[data-reported-group="without"]');
+ assert.equal(await separated.locator('#resultOnlyRows tr').count(),78);
  const announcedNames=await separated.locator('#resultOnlyRows [data-company-open]').evaluateAll(els=>els.map(el=>el.textContent));
  for(const name of screenshotNames)assert.ok(announcedNames.includes(name),'missing announced result: '+name);
+ await separated.click('[data-tab="t1"]');
+ assert.equal(new URL(separated.url()).hash,'#forecasts');
+ const forecastNames=await separated.locator('#tbody [data-company-open]').evaluateAll(els=>els.map(el=>el.textContent));
+ assert.equal(forecastNames.length,66);
+ for(const name of screenshotNames)assert.ok(!forecastNames.includes(name),'result-only company in forecast page: '+name);
+ assert.match(await separated.locator('#thead').innerText(),/فعلي/);
+ await separated.click('[data-tab="t7"]');
+ assert.equal(new URL(separated.url()).hash,'#results');
  await separated.fill('#resultOnlySearch','لوبريف');
  assert.equal(await separated.locator('#resultOnlyRows tr').count(),1);
  await separated.click('#resultOnlyClear');
- assert.equal(await separated.locator('#resultOnlyRows tr').count(),screenshotNames.length);
+ assert.equal(await separated.locator('#resultOnlyRows tr').count(),78);
  await separated.selectOption('#resultOnlySort','growth:desc');
- assert.equal(await separated.locator('#resultOnlyRows tr').count(),screenshotNames.length);
+ assert.equal(await separated.locator('#resultOnlyRows tr').count(),78);
  await separated.click('#resultOnlyClear');
  assert.ok(await separated.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'announced page overflows on phone');
  fs.mkdirSync('work/browser-check',{recursive:true});
@@ -58,15 +60,18 @@ const fs=require('node:fs');
      const node=await cdp.send('DOM.querySelector',{nodeId:document.root.nodeId,selector});
      return (await cdp.send('CSS.getPlatformFontsForNode',{nodeId:node.nodeId})).fonts;
    };
-   for(const selector of ['.logo-t','#tTitle','.sc-l']){
+   for(const selector of ['.logo-t','#resultOnlyPanel h2','#reportedStats .sc-l']){
      assert.ok((await actualFonts(selector)).some(font=>font.familyName==='Alexandria'&&font.isCustomFont),'Alexandria Arabic not rendered in '+selector);
    }
    await separated.click('#globalAdd');
    assert.ok((await actualFonts('.u-mode button')).some(font=>font.familyName==='Alexandria'&&font.isCustomFont),'Alexandria Arabic not rendered in input workspace');
  }
  await separated.close();
- assert.equal(await page.locator('#t1').getAttribute('aria-hidden'),'false');
- assert.equal(await page.locator('#t7').getAttribute('aria-hidden'),'true');
+ assert.equal(await page.locator('#t1').getAttribute('aria-hidden'),'true');
+ assert.equal(await page.locator('#t7').getAttribute('aria-hidden'),'false');
+ assert.equal(await page.locator('#resultOnlyRows tr').count(),35);
+ assert.equal(await page.evaluate(()=>getData().filter(hasNumericForecast).length),114);
+ await go(page,'t1');
  assert.equal(await page.locator('.tabs .tab').count(),5);
  assert.equal(await page.locator('.rasd-sidebar').isVisible(),true);
  assert.equal(await page.locator('#qfAnnounced').isVisible(),true);
@@ -149,7 +154,7 @@ const fs=require('node:fs');
    await page.setViewportSize({width:1440,height:1000});
  }
  await go(page,'t1');await page.getByRole('button',{name:'سابك',exact:true}).click();assert.equal(await page.locator('#t5').getAttribute('aria-hidden'),'false');
- await page.goto('file://'+path.resolve('index.html')+'#stock-performance');assert.equal(await page.locator('#t1').getAttribute('aria-hidden'),'false');
+ await page.goto('file://'+path.resolve('index.html')+'#stock-performance');assert.equal(await page.locator('#t7').getAttribute('aria-hidden'),'false');
  assert.deepEqual(priceRequests,[]);assert.deepEqual(errors,[]);
  console.log('Passed: empty house persistence, duplicates, forecast rename/archive, source-preserving backup restore, metadata-only restore, three themes, mobile, company navigation, no price requests.');
  } finally {await browser.close();}

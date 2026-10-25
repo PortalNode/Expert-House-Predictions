@@ -21,6 +21,7 @@
   );
   const DEFAULT_EXPERTS = [...EXPERTS];
   const BASE_FORECASTS = structuredClone(D25);
+  const PUBLISHED = globalThis.RASD_PUBLISHED_DATA;
   let expertRegistry = ResearchHouses.createRegistry(DEFAULT_EXPERTS);
   const KEY = "finUnifiedV1";
   const UNDO = "finUnifiedUndoV1";
@@ -131,6 +132,39 @@
     originalSaveDates();
     $("uUndo") && ($("uUndo").hidden = !localStorage.getItem(UNDO));
   }
+  function mergePublished(state) {
+    if (!PUBLISHED || PUBLISHED.version !== 1) return state;
+    const forecasts = {...state.forecasts};
+    for (const [period, publishedRows] of Object.entries(PUBLISHED.forecasts)) {
+      const rows = new Map((Array.isArray(forecasts[period]) ? forecasts[period] : []).map(row => [canonicalCompany(row.name), row]));
+      for (const publishedRow of publishedRows) {
+        const name = canonicalCompany(publishedRow.name);
+        const saved = rows.get(name);
+        if (!saved) {
+          rows.set(name, {...publishedRow, name, forecasts:{...publishedRow.forecasts}});
+          continue;
+        }
+        const availableForecasts = {...publishedRow.forecasts};
+        for (const [house, value] of Object.entries(saved.forecasts || {})) {
+          if (value != null) availableForecasts[house] = value;
+        }
+        rows.set(name, {
+          ...saved,
+          name,
+          prev: saved.prev ?? publishedRow.prev,
+          actual: saved.actual ?? publishedRow.actual,
+          forecasts: availableForecasts,
+        });
+      }
+      forecasts[period] = [...rows.values()];
+    }
+    const announcements = {...state.announcements};
+    for (const [company, dates] of Object.entries(PUBLISHED.announcements)) {
+      const name = canonicalCompany(company);
+      announcements[name] = {...dates, ...(announcements[name] || {})};
+    }
+    return {...state, forecasts, announcements};
+  }
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
@@ -188,6 +222,11 @@
       }
       seedVersion = 4;
       persist(current());
+    }
+    if (seedVersion < 5 && PUBLISHED?.version === 1) {
+      const merged = mergePublished(current());
+      seedVersion = 5;
+      persist(merged);
     }
   } catch (error) {
     storageError = "تعذر تحميل أو حفظ مساحة العمل: " + error.message;
@@ -595,9 +634,11 @@
       refresh();
       pending = [];
       backupPayload = null;
+      const viewSection = selected.some(row => row.kind === 'result') ? 't7' : 't1';
+      const viewLabel = viewSection === 't7' ? 'عرض النتائج المعلنة' : 'عرض التوقعات';
       $("uReview").innerHTML =
-        `<div class="u-success"><span>✓</span><div><h3>تم الحفظ وربط البيانات</h3><p>${h(rtl(result.changed + " قيمة محفوظة • " + result.skipped + " قيمة أُبقيت كما هي"))}</p>${registryChanged ? "<p>تمت استعادة سجل بيوت الخبرة وأسمائها البديلة وحالة الأرشفة.</p>" : ""}<p>تجد القيم في النتائج، والمواعيد في سجل الإعلانات. يمكنك التراجع عن هذا الاستيراد.</p><button class="btn bo" id="uViewResults">عرض التوقعات والنتائج</button> <button class="btn bo" id="uViewCalendar">فتح المواعيد</button></div></div>`;
-      $("uViewResults").onclick = () => navigateSection("t1");
+        `<div class="u-success"><span>✓</span><div><h3>تم الحفظ وربط البيانات</h3><p>${h(rtl(result.changed + " قيمة محفوظة • " + result.skipped + " قيمة أُبقيت كما هي"))}</p>${registryChanged ? "<p>تمت استعادة سجل بيوت الخبرة وأسمائها البديلة وحالة الأرشفة.</p>" : ""}<p>تجد القيم في الصفحات المناسبة، والمواعيد في سجل الإعلانات. يمكنك التراجع عن هذا الاستيراد.</p><button class="btn bo" id="uViewResults">${viewLabel}</button> <button class="btn bo" id="uViewCalendar">فتح المواعيد</button></div></div>`;
+      $("uViewResults").onclick = () => navigateSection(viewSection);
       $("uViewCalendar").onclick = () => navigateSection("t6");
       showToast("تم حفظ البيانات على هذا المتصفح");
     } catch (e) {
@@ -760,7 +801,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     showToast("تم تصدير التوقعات والمواعيد ومعلومات المصادر");
   };
-  // Supersede the old result parser that excluded companies without forecasts.
+  // The unified importer is the visible entry point for results and dates.
   $("argaamImportPanel").hidden = true;
 
   const calendar = document.createElement("section");
